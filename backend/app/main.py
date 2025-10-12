@@ -1,26 +1,26 @@
+"""
+FastAPI 메인 애플리케이션
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import os
-from dotenv import load_dotenv
-
-from .database import engine, Base
-from .routers import chat, notices  # 🆕 notices 추가
-
-load_dotenv()
+from .database import engine
+from . import models
+from .routers import chat, classrooms, notices
 
 # 데이터베이스 테이블 생성
-Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Agent KHU API",
-    description="경희대학교 강의실 안내 AI Agent API",
-    version="0.2.0"  # 버전 업
+    description="경희대 소프트웨어융합대학 AI 챗봇 API",
+    version="1.0.0"
 )
 
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,19 +28,25 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(chat.router)
-app.include_router(notices.router)  # 🆕
+app.include_router(classrooms.router)
+app.include_router(notices.router)
 
 
 @app.get("/")
 async def root():
+    """API 루트"""
     return {
         "message": "Agent KHU API",
-        "version": "0.2.0",
-        "features": ["classroom", "instagram_notices"],  # 🆕
-        "docs": "/docs"
+        "version": "1.0.0",
+        "endpoints": {
+            "chat": "/api/chat",
+            "classrooms": "/api/classrooms",
+            "notices": "/api/notices"
+        }
     }
 
 
 @app.get("/health")
 async def health_check():
+    """헬스 체크"""
     return {"status": "healthy"}
