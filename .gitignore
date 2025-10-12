@@ -1,4 +1,7 @@
-# -------- ENV (절대 커밋 금지) --------
+# ----------------------------
+# ENV files (절대 커밋 금지)
+# ----------------------------
+# ENV files
 .env
 *.env
 **/.env
@@ -6,10 +9,14 @@ backend/.env
 frontend/.env
 mcp-servers/**/.env
 
-# 예시 템플릿만 커밋 (실제 키 제거)
-# backend/.env.example, frontend/.env.example 등은 플레이스홀더만
+# example 파일은 허용(실값 금지)
+!backend/.env.example
+!frontend/.env.example
+!mcp-servers/**/.env.example
 
-# -------- Python --------
+# ----------------------------
+# Python / FastAPI backend
+# ----------------------------
 __pycache__/
 *.py[cod]
 *.sqlite3
@@ -20,24 +27,39 @@ ENV/
 *.log
 backend/.pytest_cache/
 backend/.mypy_cache/
+backend/.coverage
 
-# -------- Node / React / TS --------
+# ----------------------------
+# Node / React frontend
+# ----------------------------
 node_modules/
 dist/
 build/
 .cache/
 *.log
+frontend/.vite/
+frontend/.eslintcache
+
+# ----------------------------
+# MCP Servers (Node + TS)
+# ----------------------------
 mcp-servers/**/node_modules/
 mcp-servers/**/dist/
 mcp-servers/**/.cache/
 mcp-servers/**/logs/
 
-# -------- IDE / OS --------
+# ----------------------------
+# IDE / OS files
+# ----------------------------
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# -------- Docker --------
+# ----------------------------
+# Docker / Container artifacts
+# ----------------------------
 docker-compose*.log
-*.pidmcp-servers/**/.env
+*.pid
+*.seed
+*.pid.lock
