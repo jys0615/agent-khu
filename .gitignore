@@ -40,4 +40,4 @@ Thumbs.db
 
 # -------- Docker --------
 docker-compose*.log
-*.pid
+*.pidmcp-servers/**/.env
