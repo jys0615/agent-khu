@@ -1,0 +1,87 @@
+# ----------------------------
+# Python / FastAPI backend
+# ----------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Cached data
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.coverage
+coverage/
+*.cover
+
+# ----------------------------
+# Node / React frontend
+# ----------------------------
+node_modules/
+dist/
+build/
+.cache/
+*.log
+
+# Environment files
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+
+# Dependency lock files (optional — keep if needed)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ----------------------------
+# MCP servers (Node + TS)
+# ----------------------------
+mcp-servers/**/node_modules/
+mcp-servers/**/dist/
+mcp-servers/**/.cache/
+mcp-servers/**/.env
+mcp-servers/**/logs/
+
+# ----------------------------
+# IDE / OS files
+# ----------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ----------------------------
+# Docker / Container artifacts
+# ----------------------------
+*.pid
+*.seed
+*.pid.lock
+docker-compose.override.yml
+docker-compose*.log
+
+# ----------------------------
+# Miscellaneous
+# ----------------------------
+*.bak
+*.tmp
+*.old
+logs/
+.cache/
+__debug_bin
