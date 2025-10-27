@@ -18,7 +18,7 @@ router = APIRouter(
 )
 
 # Python 스크립트 경로
-SCRAPER_PATH = os.path.expanduser("~/Desktop/agent-khu/mcp-servers/khu-notice-mcp/scrapers/khu_scraper.py")
+SCRAPER_PATH = os.path.expanduser("~/Desktop/agent-khu/mcp-servers/notice-mcp/scrapers/khu_scraper.py")
 
 
 def run_scraper(source: str, limit: int = 20) -> List[dict]:
@@ -27,8 +27,7 @@ def run_scraper(source: str, limit: int = 20) -> List[dict]:
     """
     try:
         result = subprocess.run(
-            ["/Library/Frameworks/Python.framework/Versions/3.12/bin/python3", 
-             SCRAPER_PATH, source, str(limit)],
+            ["python3", SCRAPER_PATH, source, str(limit)],
             capture_output=True,
             text=True,
             timeout=30
@@ -48,7 +47,7 @@ def run_scraper(source: str, limit: int = 20) -> List[dict]:
         raise Exception(f"Scraper error: {str(e)}")
 
 
-@router.get("", response_model=List[schemas.Notice])
+@router.get("", response_model=List[schemas.NoticeInfo])
 async def get_notices(
     source: Optional[str] = None,
     limit: int = 10,
@@ -62,7 +61,7 @@ async def get_notices(
     return notices
 
 
-@router.get("/search", response_model=List[schemas.Notice])
+@router.get("/search", response_model=List[schemas.NoticeInfo])
 async def search_notices(
     query: str,
     limit: int = 5,
@@ -206,7 +205,7 @@ async def sync_all_notices(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{notice_id}", response_model=schemas.Notice)
+@router.get("/{notice_id}", response_model=schemas.NoticeInfo)
 async def get_notice(
     notice_id: int,
     db: Session = Depends(get_db)

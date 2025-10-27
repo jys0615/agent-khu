@@ -1,0 +1,187 @@
+{
+    "2024": {
+        "year": "2024",
+        "total_courses": 15,
+        "courses": [
+            {
+                "year": "2024",
+                "code": "SWE2001",
+                "name": "자료구조",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": [
+                    "프로그래밍기초"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE2002",
+                "name": "알고리즘",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "자료구조"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE2003",
+                "name": "데이터베이스",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": []
+            },
+            {
+                "year": "2024",
+                "code": "SWE3001",
+                "name": "운영체제",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "자료구조"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE3002",
+                "name": "컴퓨터네트워크",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": []
+            },
+            {
+                "year": "2024",
+                "code": "SWE3003",
+                "name": "소프트웨어공학",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": []
+            },
+            {
+                "year": "2024",
+                "code": "SWE4001",
+                "name": "인공지능",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": [
+                    "알고리즘",
+                    "확률및통계"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE4002",
+                "name": "머신러닝",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "인공지능"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE4003",
+                "name": "딥러닝",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": [
+                    "머신러닝"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE1001",
+                "name": "프로그래밍기초",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": []
+            },
+            {
+                "year": "2024",
+                "code": "SWE1002",
+                "name": "객체지향프로그래밍",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "프로그래밍기초"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE2004",
+                "name": "웹프로그래밍",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": [
+                    "프로그래밍기초"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE3004",
+                "name": "모바일프로그래밍",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "객체지향프로그래밍"
+                ]
+            },
+            {
+                "year": "2024",
+                "code": "SWE4004",
+                "name": "캡스톤디자인",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": []
+            },
+            {
+                "year": "2024",
+                "code": "SWE4005",
+                "name": "졸업프로젝트",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "캡스톤디자인"
+                ]
+            }
+        ],
+        "raw_text": "소프트웨어융합대학 2024학년도 교육과정..."
+    },
+    "2023": {
+        "year": "2023",
+        "total_courses": 14,
+        "courses": [
+            {
+                "year": "2023",
+                "code": "SWE2001",
+                "name": "자료구조",
+                "credits": 3,
+                "semester": "1학기",
+                "prerequisites": [
+                    "프로그래밍기초"
+                ]
+            },
+            {
+                "year": "2023",
+                "code": "SWE2002",
+                "name": "알고리즘",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "자료구조"
+                ]
+            },
+            {
+                "year": "2023",
+                "code": "SWE3001",
+                "name": "운영체제",
+                "credits": 3,
+                "semester": "2학기",
+                "prerequisites": [
+                    "자료구조"
+                ]
+            }
+        ],
+        "raw_text": "소프트웨어융합대학 2023학년도 교육과정..."
+    }
+}

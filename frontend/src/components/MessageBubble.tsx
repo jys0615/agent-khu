@@ -1,121 +1,135 @@
 import React from 'react';
-
-interface Notice {
-    id: number;
-    title: string;
-    content: string;
-    instagram_url: string;
-    image_url?: string;
-    posted_at: string;
-    likes?: number;
-    comments?: number;
-}
+import ReactMarkdown from 'react-markdown';
+import NoticeCard from './NoticeCard';
+import MealCard from './MealCard';
+import LibrarySeatCard from './LibrarySeatCard';
+import ShuttleCard from './ShuttleCard';
+import CourseCard from './CourseCard';
 
 interface MessageBubbleProps {
     message: {
         text: string;
         isUser: boolean;
         classroomInfo?: any;
-        notices?: Notice[];
+        notices?: any[];
+        meals?: any[];
+        seats?: any[];
+        shuttle?: any;
+        shuttles?: any[];
+        courses?: any[];
     };
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
-    if (message.isUser) {
-        return (
-            <div className="flex justify-end">
-                <div className="bg-blue-600 text-white rounded-lg px-4 py-3 max-w-[70%]">
-                    <p className="whitespace-pre-wrap">{message.text}</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="flex items-start space-x-2">
-            <div className="bg-gray-200 rounded-lg px-4 py-3 max-w-[70%]">
-                <p className="whitespace-pre-wrap text-gray-800">{message.text}</p>
+        <div className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
+            <div
+                className={`rounded-lg px-4 py-3 max-w-[70%] ${message.isUser
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-800'
+                    }`}
+            >
+                {/* Markdown 렌더링 */}
+                <div className="prose prose-sm max-w-none">
+                    <ReactMarkdown
+                        components={{
+                            p: ({ node, ...props }) => <p className="whitespace-pre-wrap mb-2" {...props} />,
+                            strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
+                            a: ({ node, ...props }) => <a className="text-blue-500 hover:underline" {...props} />
+                        }}
+                    >
+                        {message.text}
+                    </ReactMarkdown>
+                </div>
 
+                {/* 강의실 정보 */}
                 {message.classroomInfo && (
-                    <div className="mt-3 p-3 bg-white rounded border border-gray-300">
-                        <h4 className="font-semibold text-sm text-gray-700 mb-2">📍 강의실 정보</h4>
-                        <div className="text-sm text-gray-600 space-y-1">
-                            <p>
-                                <span className="font-medium">코드:</span> {message.classroomInfo.code}
-                            </p>
-                            <p>
-                                <span className="font-medium">건물:</span> {message.classroomInfo.building_name}
-                            </p>
-                            <p>
-                                <span className="font-medium">호실:</span> {message.classroomInfo.room_number}호
-                            </p>
-                            <p>
-                                <span className="font-medium">층:</span> {message.classroomInfo.floor}층
-                            </p>
-                            {message.classroomInfo.capacity && (
-                                <p>
-                                    <span className="font-medium">수용인원:</span> {message.classroomInfo.capacity}명
-                                </p>
-                            )}
-                        </div>
+                    <div className="mt-3 p-3 bg-white rounded-lg shadow-sm">
+                        <p className="text-sm font-semibold text-gray-800">
+                            📍 {message.classroomInfo.code} - {message.classroomInfo.room_name}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                            {message.classroomInfo.floor}층 · {message.classroomInfo.building_name}
+                        </p>
                     </div>
                 )}
 
+                {/* 공지사항 */}
                 {message.notices && message.notices.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                        <h4 className="font-semibold text-sm text-gray-700 mb-2">📢 공지사항</h4>
-                        {message.notices.map((notice) => (
-                            <div
-                                key={notice.id}
-                                className="bg-white rounded-lg border border-gray-300 overflow-hidden hover:shadow-md transition-shadow"
-                            >
-                                {notice.image_url && (
-                                    <img
-                                        src={notice.image_url}
-                                        alt={notice.title}
-                                        className="w-full h-48 object-cover"
-                                    />
-                                )}
+                    <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-bold text-gray-700">📢 공지사항</span>
+                            <span className="text-xs text-gray-500">({message.notices.length}개)</span>
+                        </div>
+                        {message.notices.map((notice, idx) => (
+                            <NoticeCard key={idx} notice={notice} />
+                        ))}
+                    </div>
+                )}
 
-                                <div className="p-3">
-                                    <h5 className="font-semibold text-sm text-gray-800 mb-1">
-                                        {notice.title}
-                                    </h5>
-                                    <p className="text-xs text-gray-600 line-clamp-2 mb-2">
-                                        {notice.content}
-                                    </p>
+                {/* 학식 메뉴 */}
+                {message.meals && message.meals.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-bold text-gray-700">🍚 학식 메뉴</span>
+                            <span className="text-xs text-gray-500">({message.meals.length}개)</span>
+                        </div>
+                        {message.meals.map((meal, idx) => (
+                            <MealCard key={idx} meal={meal} />
+                        ))}
+                    </div>
+                )}
 
-                                    <div className="flex items-center justify-between text-xs text-gray-500">
-                                        <span>
-                                            {new Date(notice.posted_at).toLocaleDateString('ko-KR')}
-                                        </span>
-                                        <div className="flex items-center space-x-3">
-                                            {notice.likes && (
-                                                <span>❤️ {notice.likes}</span>
-                                            )}
-                                            {notice.comments && (
-                                                <span>💬 {notice.comments}</span>
-                                            )}
-                                        </div>
-                                    </div>
+                {/* 도서관 좌석 */}
+                {message.seats && message.seats.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-bold text-gray-700">📚 도서관 좌석</span>
+                            <span className="text-xs text-gray-500">({message.seats.length}개)</span>
+                        </div>
+                        {message.seats.map((seat, idx) => (
+                            <LibrarySeatCard key={idx} seat={seat} />
+                        ))}
+                    </div>
+                )}
 
+                {/* 셔틀버스 (다음 버스) */}
+                {message.shuttle && (
+                    <div className="mt-4">
+                        <div className="mb-3">
+                            <span className="text-sm font-bold text-gray-700">🚌 다음 버스</span>
+                        </div>
+                        <ShuttleCard shuttle={message.shuttle} />
+                    </div>
+                )}
 
-                <a
-                    href={notice.instagram_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-blue-600 hover:underline"
-                >
-                    Instagram에서 보기 →
-                </a>
-                            </div>
-              </div>
-                ))}
+                {/* 셔틀버스 (전체 시간표) */}
+                {message.shuttles && message.shuttles.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-bold text-gray-700">🚌 셔틀버스</span>
+                        </div>
+                        {message.shuttles.map((shuttle, idx) => (
+                            <ShuttleCard key={idx} shuttle={shuttle} />
+                        ))}
+                    </div>
+                )}
+
+                {/* 수강신청 강좌 */}
+                {message.courses && message.courses.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-bold text-gray-700">📖 수강 가능 과목</span>
+                            <span className="text-xs text-gray-500">({message.courses.length}개)</span>
+                        </div>
+                        {message.courses.map((course, idx) => (
+                            <CourseCard key={idx} course={course} />
+                        ))}
+                    </div>
+                )}
             </div>
-        )}
         </div>
-    </div >
-  );
+    );
 };
 
 export default MessageBubble;

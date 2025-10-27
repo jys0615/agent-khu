@@ -48,16 +48,18 @@ export interface ChatResponse {
     show_notices: boolean;  // 🆕
 }
 
+
 export const sendMessage = async (
     message: string,
-    userLatitude?: number,
-    userLongitude?: number
-): Promise<ChatResponse> => {
-    const response = await axios.post<ChatResponse>(`${API_BASE_URL}/api/chat`, {
+    latitude?: number,
+    longitude?: number
+) => {
+    const response = await axios.post(`${API_BASE_URL}/api/chat`, {
         message,
-        user_latitude: userLatitude,
-        user_longitude: userLongitude,
+        latitude,
+        longitude
     });
+    
     return response.data;
 };
 

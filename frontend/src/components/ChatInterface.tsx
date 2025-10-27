@@ -10,7 +10,7 @@ interface Message {
     classroomInfo?: any;
     mapLink?: string;
     showMapButton?: boolean;
-    notices?: any[];  // 🆕
+    notices?: any[];
 }
 
 const ChatInterface: React.FC = () => {
@@ -23,7 +23,7 @@ const ChatInterface: React.FC = () => {
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -40,12 +40,18 @@ const ChatInterface: React.FC = () => {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     setUserLocation({
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude,
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
                     });
+                    console.log('✅ 위치 획득:', position.coords.latitude, position.coords.longitude);
                 },
                 (error) => {
-                    console.log('위치 정보를 가져올 수 없습니다:', error);
+                    console.log('⚠️ 위치 권한 거부:', error.message);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
                 }
             );
         }
@@ -67,18 +73,18 @@ const ChatInterface: React.FC = () => {
         try {
             const response = await sendMessage(
                 inputValue,
-                userLocation?.lat,
-                userLocation?.lon
+                userLocation?.latitude,
+                userLocation?.longitude
             );
 
             const aiMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 text: response.message,
                 isUser: false,
-                classroomInfo: response.classroom_info,
+                classroomInfo: response.classroom,
                 mapLink: response.map_link,
                 showMapButton: response.show_map_button,
-                notices: response.notices,  // 🆕
+                notices: response.notices,
             };
 
             setMessages((prev) => [...prev, aiMessage]);
@@ -130,6 +136,11 @@ const ChatInterface: React.FC = () => {
 
             {/* 입력 영역 */}
             <div className="border-t p-4">
+                {userLocation && (
+                    <div className="mb-2 text-xs text-green-600">
+                        📍 현재 위치 확인됨 - 길찾기 가능
+                    </div>
+                )}
                 <div className="flex space-x-2">
                     <input
                         type="text"

@@ -1,365 +1,524 @@
-from openai import OpenAI
-from sqlalchemy.orm import Session
-from . import crud, schemas
-from typing import Optional, Tuple, List
+"""
+Claude + MCP 기반 자율 AI Agent
+"""
 import os
 import json
-import re
-import subprocess
+from typing import Optional, Dict, Any, List
+from sqlalchemy.orm import Session
+from anthropic import Anthropic
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from . import schemas
+from .mcp_client import mcp_client
 
-# Python 스크립트 경로
-SCRAPER_PATH = os.path.expanduser("~/Desktop/agent-khu/mcp-servers/khu-notice-mcp/scrapers/khu_scraper.py")
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-
-def run_scraper(source: str, limit: int = 20) -> List[dict]:
-    """Python 크롤러 스크립트 직접 실행"""
-    try:
-        result = subprocess.run(
-            ["/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
-             SCRAPER_PATH, source, str(limit)],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if result.returncode != 0:
-            return []
-        
-        return json.loads(result.stdout)
-    except Exception as e:
-        print(f"Scraper error: {e}")
-        return []
-
-
-def extract_classroom_code(text: str) -> Optional[str]:
-    """텍스트에서 강의실 코드 추출"""
-    pattern1 = r'전\s*(\d+)'
-    match1 = re.search(pattern1, text)
-    if match1:
-        return f"전{match1.group(1)}"
-    
-    pattern2 = r'전자정보대학관\s*(\d+)\s*호'
-    match2 = re.search(pattern2, text)
-    if match2:
-        return f"전{match2.group(1)}"
-    
-    return None
-
-
-def generate_naver_map_link(
-    classroom: schemas.Classroom,
-    user_lat: Optional[float] = None,
-    user_lon: Optional[float] = None
-) -> str:
-    """네이버 지도 웹 URL 생성"""
-    dest_lat = classroom.latitude or 37.2420
-    dest_lon = classroom.longitude or 127.0794
-    
-    destination_name = f"{classroom.building_name} {classroom.room_number}호"
-    
-    if user_lat and user_lon:
-        return f"https://map.naver.com/p/directions/{user_lon},{user_lat},{dest_lon},{dest_lat},walk/"
-    else:
-        return f"https://map.naver.com/p/search/{destination_name}?c={dest_lon},{dest_lat},18,0,0,0,dh"
-
-
-def get_classroom_info_function():
-    """강의실/공간 정보 조회 Function"""
-    return {
-        "type": "function",
-        "function": {
-            "name": "get_classroom_info",
-            "description": """경희대학교 전자정보대학관의 강의실, 연구실, 행정실 등 공간 정보를 조회합니다.
-            
-검색 가능한 정보:
-- 강의실 번호 (예: 101, 전101, B08)
-- 교수님 이름 (예: 조진성, 홍충선)
-- 공간 유형 (예: 학생회실, 매점, 세미나실)
-- 키워드 (예: 화장실, 휴게실)""",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "검색할 내용 (강의실 번호, 교수님 이름, 공간명 등)"
-                    }
-                },
-                "required": ["query"]
-            }
+# Tools 정의
+tools = [
+    {
+        "name": "search_classroom",
+        "description": "경희대 전자정보대학관 강의실/연구실/편의시설을 검색합니다",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "검색어 (강의실 번호, 교수명, 시설명 등)"
+                }
+            },
+            "required": ["query"]
         }
-    }
-
-
-def get_notice_search_function():
-    """공지사항 검색 Function"""
-    return {
-        "type": "function",
-        "function": {
-            "name": "search_notices",
-            "description": "경희대 소프트웨어융합대학 공지사항을 검색합니다.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "검색할 키워드"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "결과 개수 (기본값: 5)",
-                        "default": 5
-                    }
+    },
+    {
+        "name": "search_notices",
+        "description": "학과 공지사항을 키워드로 검색합니다",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "검색 키워드"
                 },
-                "required": ["query"]
-            }
+                "limit": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "결과 개수"
+                }
+            },
+            "required": ["query"]
         }
-    }
-
-
-def get_latest_notices_function():
-    """최신 공지사항 조회 Function"""
-    return {
-        "type": "function",
-        "function": {
-            "name": "get_latest_notices",
-            "description": "경희대 소프트웨어융합대학 최신 공지사항을 가져옵니다.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "source": {
-                        "type": "string",
-                        "description": "소스 (swedu: SW사업단, department: 학과, schedule: 학사일정)",
-                        "enum": ["swedu", "department", "schedule"]
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "가져올 공지 개수 (기본값: 5)",
-                        "default": 5
-                    }
+    },
+    {
+        "name": "get_latest_notices",
+        "description": "최신 공지사항을 조회합니다",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": "공지 출처",
+                    "enum": ["swedu", "department"],
+                    "default": "swedu"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "결과 개수"
                 }
             }
         }
+    },
+    {
+        "name": "crawl_fresh_notices",
+        "description": "실시간으로 공지사항을 크롤링합니다 (최신 정보 필요 시)",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "enum": ["swedu", "department"],
+                    "default": "swedu"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 20
+                }
+            }
+        }
+    },
+    {
+        "name": "get_today_meals",
+        "description": "오늘의 학식 메뉴를 조회합니다",
+        "input_schema": {"type": "object", "properties": {
+            "cafeteria": {"type": "string", "enum": ["student", "faculty", "dormitory"]}
+        }}
+    },
+    {
+        "name": "search_meals",
+        "description": "특정 메뉴가 나오는 날을 검색합니다",
+        "input_schema": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "검색할 메뉴"}
+        }, "required": ["query"]}
+    },
+    {
+        "name": "get_seat_status",
+        "description": "도서관 좌석 현황을 조회합니다",
+        "input_schema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "find_available_seats",
+        "description": "빈 자리가 있는 열람실을 찾습니다",
+        "input_schema": {"type": "object", "properties": {
+            "min_seats": {"type": "integer", "default": 1}
+        }}
+    },
+    {
+        "name": "get_next_shuttle",
+        "description": "다음 셔틀버스 시간을 조회합니다",
+        "input_schema": {"type": "object", "properties": {
+            "route": {"type": "string", "enum": ["to_station", "to_campus"]}
+        }}
+    },
+    {
+        "name": "search_courses",
+        "description": "학과별 개설 교과목을 검색합니다",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "department": {
+                    "type": "string",
+                    "description": "학과명 (예: 소프트웨어융합학과)"
+                },
+                "keyword": {
+                    "type": "string",
+                    "description": "검색 키워드 (과목명, 교수명)"
+                }
+            }
+        }
+    },
+    {
+        "name": "search_curriculum",
+        "description": "소프트웨어융합대학 교과과정에서 과목을 검색합니다 (과목명, 과목코드, 학점, 선수과목)",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "검색할 과목명 또는 과목코드 (예: 자료구조, SWE2001)"
+                },
+                "year": {
+                    "type": "string",
+                    "description": "학년도 (선택사항, 기본값: latest)",
+                    "default": "latest"
+                }
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "get_curriculum_by_semester",
+        "description": "특정 학기에 개설되는 교과과정 과목 목록을 조회합니다",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "semester": {
+                    "type": "string",
+                    "description": "학기 (1학기 또는 2학기)",
+                    "enum": ["1학기", "2학기"]
+                },
+                "year": {
+                    "type": "string",
+                    "description": "학년도 (선택사항)",
+                    "default": "latest"
+                }
+            },
+            "required": ["semester"]
+        }
     }
+]
 
 
-async def chat_with_agent(
-    db: Session,
-    user_message: str,
-    user_lat: Optional[float] = None,
-    user_lon: Optional[float] = None
-) -> Tuple[str, Optional[schemas.Classroom], Optional[str], bool, Optional[List[schemas.Notice]], bool]:
-    """OpenAI Agent와 대화"""
+async def process_tool_call_async(
+    tool_name: str,
+    tool_input: Dict,
+    user_latitude: Optional[float] = None,
+    user_longitude: Optional[float] = None
+) -> Dict[str, Any]:
+    """MCP Tool 실행"""
     
-    system_prompt = """당신은 경희대학교 소프트웨어융합대학 학생들을 위한 AI 어시스턴트입니다.
+    try:
+        if tool_name == "search_classroom":
+            query = tool_input.get("query", "")
+            
+            result = await mcp_client.call_tool(
+                "classroom",
+                "search_classroom",
+                {"query": query}
+            )
+            
+            classrooms = json.loads(result) if isinstance(result, str) else result
+            
+            if classrooms and len(classrooms) > 0:
+                classroom = classrooms[0]
+                
+                from .utils import generate_naver_map_link
+                classroom_obj = schemas.ClassroomInfo(**classroom)
+                map_link = generate_naver_map_link(
+                    classroom_obj,
+                    user_latitude,
+                    user_longitude
+                )
+                
+                return {
+                    "found": True,
+                    "classroom": classroom,
+                    "map_link": map_link
+                }
+            else:
+                return {
+                    "found": False,
+                    "message": "강의실을 찾을 수 없습니다"
+                }
+        
+        elif tool_name == "search_notices":
+            query = tool_input.get("query", "")
+            limit = tool_input.get("limit", 5)
+            
+            result = await mcp_client.call_tool(
+                "notice",
+                "search_notices",
+                {"query": query, "limit": limit}
+            )
+            
+            notices = json.loads(result) if isinstance(result, str) else result
+            
+            return {
+                "found": len(notices) > 0,
+                "notices": notices
+            }
+        
+        elif tool_name == "get_latest_notices":
+            source = tool_input.get("source", "swedu")
+            limit = tool_input.get("limit", 5)
+            
+            result = await mcp_client.call_tool(
+                "notice",
+                "get_latest_notices",
+                {"source": source, "limit": limit}
+            )
+            
+            notices = json.loads(result) if isinstance(result, str) else result
+            
+            return {
+                "found": len(notices) > 0,
+                "notices": notices
+            }
+        
+        elif tool_name == "crawl_fresh_notices":
+            source = tool_input.get("source", "swedu")
+            limit = tool_input.get("limit", 20)
+            
+            result = await mcp_client.call_tool(
+                "notice",
+                "crawl_fresh_notices",
+                {"source": source, "limit": limit}
+            )
+            
+            return {
+                "found": True,
+                "message": result if isinstance(result, str) else "크롤링 완료"
+            }
+        
+        elif tool_name == "search_courses":
+            department = tool_input.get("department", "소프트웨어융합학과")
+            keyword = tool_input.get("keyword", "")
+            
+            result = await mcp_client.call_tool(
+                "course",
+                "search_courses", 
+                {"department": department, "keyword": keyword}
+            )
+            
+            courses = json.loads(result) if isinstance(result, str) else result
+            
+            return {
+                "found": len(courses.get("courses", [])) > 0 if isinstance(courses, dict) else False,
+                "courses": courses
+            }
+        
+        elif tool_name == "search_curriculum":
+            query = tool_input.get("query", "")
+            year = tool_input.get("year", "latest")
+            
+            result = await mcp_client.call_tool(
+                "curriculum",
+                "search_courses",
+                {"query": query, "year": year}
+            )
+            
+            curriculum_data = json.loads(result) if isinstance(result, str) else result
+            
+            return {
+                "found": curriculum_data.get("found", False),
+                "count": curriculum_data.get("count", 0),
+                "year": curriculum_data.get("year", year),
+                "courses": curriculum_data.get("courses", [])
+            }
+        
+        elif tool_name == "get_curriculum_by_semester":
+            semester = tool_input.get("semester")
+            year = tool_input.get("year", "latest")
+            
+            result = await mcp_client.call_tool(
+                "curriculum",
+                "get_courses_by_semester",
+                {"semester": semester, "year": year}
+            )
+            
+            curriculum_data = json.loads(result) if isinstance(result, str) else result
+            
+            return {
+                "found": curriculum_data.get("found", False),
+                "semester": semester,
+                "year": curriculum_data.get("year", year),
+                "count": curriculum_data.get("count", 0),
+                "courses": curriculum_data.get("courses", [])
+            }
+        
+        else:
+            return {"error": f"Unknown tool: {tool_name}"}
+    
+    except Exception as e:
+        print(f"❌ MCP Tool 실행 에러: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
 
-주요 역할:
-1. 전자정보대학관 공간 안내
-   - 강의실 (101, 102, 전101 등)
-   - 교수님 연구실 (교수님 이름으로 검색 가능)
-   - 학생회실, 세미나실, 매점, 화장실 등
-   - 총 314개 공간 정보 보유
 
-2. 학과 및 SW사업단 공지사항 안내
-   - SW중심대학사업단 공지
-   - 컴퓨터공학부 공지
-   - 학사일정
+async def chat_with_claude_async(
+    message: str,
+    db: Session,
+    user_latitude: Optional[float] = None,
+    user_longitude: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Claude 기반 자율 Agent (MCP)
+    
+    Agent는:
+    1. 사용자 질문 분석
+    2. 필요한 Tool들을 자율적으로 선택
+    3. Tool 실행 결과를 바탕으로 다음 행동 결정
+    4. 여러 Tool을 연속 실행 가능
+    5. 최종 답변 생성
+    """
+    
+    system_prompt = """당신은 경희대학교 소프트웨어융합대학의 자율 AI Agent입니다.
 
-검색 예시:
-- "전101 어디야?" → 강의실 정보
-- "조진성 교수님 연구실 어디?" → 301호
-- "학생회실 어디야?" → 240호 (소프트웨어융합대학/컴퓨터공학부학생회실)
-- "매점 어디?" → 112호 (휴게실/매점)
-- "화장실 어디?" → 가장 가까운 화장실 안내
-- "세미나실 있어?" → 세미나실 목록
+당신의 역할:
+1. 사용자 질문을 분석하고 필요한 정보를 파악합니다
+2. 여러 도구를 조합하여 복잡한 질문에 답변합니다
+3. 부족한 정보가 있으면 추가 도구를 사용합니다
+4. 모든 정보를 종합하여 완전한 답변을 제공합니다
+
+사용 가능한 MCP Tools:
+- search_classroom: 강의실/연구실/편의시설 검색
+- search_notices: 공지사항 키워드 검색
+- get_latest_notices: 최신 공지사항 조회
+- crawl_fresh_notices: 실시간 공지 크롤링
+- search_curriculum: 교과과정 과목 검색 (과목명, 학점, 선수과목 정보 제공)
+- get_curriculum_by_semester: 학기별 개설 과목 조회
+
+Agent 행동 원칙:
+- 복잡한 질문은 여러 도구로 나누어 해결
+- 각 도구의 결과를 확인하고 다음 행동 결정
+- 필요시 추가 도구 호출
+- 모든 정보를 종합하여 완전한 답변 제공
 
 답변 스타일:
 - 친근하고 간결하게
-- 정보를 명확히 전달
-- 추가 도움이 필요한지 물어보기
-"""
+- Markdown 사용 금지
+- 이모지 적절히 사용"""
+
+    messages = [{"role": "user", "content": message}]
     
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message}
-    ]
+    # Agent Loop: 최대 5번 반복 (무한 루프 방지)
+    max_iterations = 5
+    iteration = 0
     
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        tools=[
-            get_classroom_info_function(),
-            get_notice_search_function(),
-            get_latest_notices_function()
-        ],
-        tool_choice="auto"
-    )
+    accumulated_results = {
+        "classrooms": [],
+        "notices": [],
+        "map_links": [],
+        "courses": [],  # 수강신청 과목 (course-mcp)
+        "curriculum_courses": []  # 교과과정 과목 (curriculum-mcp)
+    }
     
-    response_message = response.choices[0].message
-    tool_calls = response_message.tool_calls
-    
-    classroom_info = None
-    map_link = None
-    show_map_button = False
-    notices = None
-    show_notices = False
-    
-    if tool_calls:
-        for tool_call in tool_calls:
-            function_name = tool_call.function.name
-            function_args = json.loads(tool_call.function.arguments)
-            
-            # 강의실/공간 정보 조회
-            if function_name == "get_classroom_info":
-                query = function_args.get("query")
-                
-                # 먼저 정확한 코드로 검색
-                classroom = crud.get_classroom_by_code(db, query)
-                
-                # 없으면 키워드 검색
-                if not classroom:
-                    classrooms = crud.search_classrooms(db, query, 1)
-                    if classrooms:
-                        classroom = classrooms[0]
-                
-                if classroom:
-                    classroom_info = schemas.Classroom.model_validate(classroom)
-                    map_link = generate_naver_map_link(classroom_info, user_lat, user_lon)
-                    show_map_button = True
-                    
-                    messages.append({
-                        "role": "assistant",
-                        "content": None,
-                        "tool_calls": [
-                            {
-                                "id": tool_call.id,
-                                "type": "function",
-                                "function": {
-                                    "name": function_name,
-                                    "arguments": tool_call.function.arguments
-                                }
-                            }
-                        ]
-                    })
-                    
-                    # 공간 유형별 설명 추가
-                    room_type_desc = {
-                        'classroom': '강의실',
-                        'professor_office': '교수 연구실',
-                        'lab': '연구실/실험실',
-                        'admin_office': '행정실',
-                        'student_council': '학생회실',
-                        'seminar_room': '세미나실',
-                        'amenity': '편의시설',
-                        'restroom': '화장실',
-                        'club_room': '동아리방',
-                        'other': '기타'
-                    }
-                    
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": json.dumps({
-                            "code": classroom.code,
-                            "name": classroom.room_name,
-                            "type": room_type_desc.get(classroom.room_type, classroom.room_type),
-                            "floor": f"지하 {classroom.floor[1:]}층" if classroom.floor == 'B' else f"{classroom.floor}층",
-                            "professor": classroom.professor_name if classroom.professor_name else None,
-                            "accessible": "학생 접근 가능" if classroom.is_accessible else "제한 구역"
-                        }, ensure_ascii=False)
-                    })
-            
-            # 공지사항 검색 (기존 로직 유지)
-            elif function_name == "search_notices":
-                query = function_args.get("query")
-                limit = function_args.get("limit", 5)
-                
-                db_notices = crud.search_notices(db, query, limit)
-                
-                if not db_notices:
-                    posts = run_scraper("swedu", 20)
-                    for post in posts:
-                        crud.create_notice_from_mcp(db, post)
-                    db_notices = crud.search_notices(db, query, limit)
-                
-                if db_notices:
-                    notices = [schemas.Notice.model_validate(n) for n in db_notices]
-                    show_notices = True
-                
-                messages.append({
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [
-                        {
-                            "id": tool_call.id,
-                            "type": "function",
-                            "function": {
-                                "name": function_name,
-                                "arguments": tool_call.function.arguments
-                            }
-                        }
-                    ]
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps([{
-                        "title": n.title,
-                        "source": n.source,
-                        "date": n.date
-                    } for n in db_notices], ensure_ascii=False)
-                })
-            
-            # 최신 공지사항 조회 (기존 로직 유지)
-            elif function_name == "get_latest_notices":
-                source = function_args.get("source", "swedu")
-                limit = function_args.get("limit", 5)
-                
-                db_notices = crud.get_latest_notices(db, source=source, limit=limit)
-                
-                if not db_notices:
-                    posts = run_scraper(source, limit)
-                    for post in posts:
-                        crud.create_notice_from_mcp(db, post)
-                    db_notices = crud.get_latest_notices(db, source=source, limit=limit)
-                
-                if db_notices:
-                    notices = [schemas.Notice.model_validate(n) for n in db_notices]
-                    show_notices = True
-                
-                messages.append({
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [
-                        {
-                            "id": tool_call.id,
-                            "type": "function",
-                            "function": {
-                                "name": function_name,
-                                "arguments": tool_call.function.arguments
-                            }
-                        }
-                    ]
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps([{
-                        "title": n.title,
-                        "source": n.source,
-                        "date": n.date
-                    } for n in db_notices], ensure_ascii=False)
-                })
+    while iteration < max_iterations:
+        iteration += 1
+        print(f"🤖 Agent Iteration {iteration}/{max_iterations}")
         
-        # 최종 응답 생성
-        final_response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages
+        # Claude API 호출
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            system=system_prompt,
+            messages=messages,
+            tools=tools
         )
         
-        ai_message = final_response.choices[0].message.content
-    else:
-        ai_message = response_message.content
+        # Tool 사용 여부 확인
+        if response.stop_reason == "tool_use":
+            tool_results = []
+            
+            # 모든 Tool 실행
+            for content in response.content:
+                if content.type == "tool_use":
+                    print(f"  🔧 Tool 사용: {content.name}")
+                    
+                    # MCP Tool 실행
+                    result = await process_tool_call_async(
+                        content.name,
+                        content.input,
+                        user_latitude,
+                        user_longitude
+                    )
+                    
+                    # 결과 누적
+                    if "classroom" in result:
+                        accumulated_results["classrooms"].append(result["classroom"])
+                        if "map_link" in result:
+                            accumulated_results["map_links"].append(result["map_link"])
+                    
+                    if "notices" in result:
+                        accumulated_results["notices"].extend(result["notices"])
+                    
+                    # curriculum 결과 처리 (search_curriculum, get_curriculum_by_semester)
+                    if content.name in ["search_curriculum", "get_curriculum_by_semester"]:
+                        if "courses" in result and isinstance(result["courses"], list):
+                            accumulated_results["curriculum_courses"].extend(result["courses"])
+                    # course 결과 처리 (search_courses)
+                    elif "courses" in result and isinstance(result["courses"], list):
+                        accumulated_results["courses"].extend(result["courses"])
+                    
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": content.id,
+                        "content": json.dumps(result, ensure_ascii=False)
+                    })
+            
+            # 대화 이력 업데이트
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "user", "content": tool_results})
+            
+            # 다음 반복으로 (Agent가 추가 Tool 사용 판단)
+            
+        elif response.stop_reason == "end_turn":
+            # Agent가 더 이상 Tool 사용 안함 → 최종 답변 생성
+            print("✅ Agent 작업 완료")
+            
+            # 최종 응답 추출
+            answer = ""
+            for content in response.content:
+                if content.type == "text":
+                    answer += content.text
+            
+            # 결과 구성
+            result = {"message": answer}
+            
+            if accumulated_results["classrooms"]:
+                result["classroom"] = accumulated_results["classrooms"][0]
+                result["map_link"] = accumulated_results["map_links"][0] if accumulated_results["map_links"] else None
+                result["show_map_button"] = True
+            
+            if accumulated_results["notices"]:
+                result["notices"] = accumulated_results["notices"]
+                result["show_notices"] = True
+            
+            if accumulated_results["courses"]:
+                result["courses"] = accumulated_results["courses"]
+                result["show_courses"] = True
+            
+            if accumulated_results["curriculum_courses"]:
+                result["curriculum_courses"] = accumulated_results["curriculum_courses"]
+                result["show_courses"] = True
+            
+            return result
+        
+        else:
+            # 기타 종료 이유
+            print(f"⚠️ Agent 종료: {response.stop_reason}")
+            break
     
-    return ai_message, classroom_info, map_link, show_map_button, notices, show_notices
+    # 최대 반복 도달
+    print("⚠️ Agent 최대 반복 도달")
+    
+    # 마지막 응답이라도 반환
+    answer = ""
+    for content in response.content:
+        if content.type == "text":
+            answer += content.text
+    
+    return {
+        "message": answer or "죄송합니다. 답변을 생성하지 못했습니다.",
+        **accumulated_results
+    }
+
+
+def chat_with_claude(
+    message: str,
+    db: Session,
+    user_latitude: Optional[float] = None,
+    user_longitude: Optional[float] = None
+) -> Dict[str, Any]:
+    """Claude Agent - Sync 래퍼"""
+    import asyncio
+    
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        result = loop.run_until_complete(
+            chat_with_claude_async(message, db, user_latitude, user_longitude)
+        )
+        return result
+    finally:
+        loop.close()
