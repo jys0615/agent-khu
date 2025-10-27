@@ -5,7 +5,9 @@ psycopg2-binary
 python-dotenv
 pydantic
 pydantic-settings
-openai
+anthropic==0.39.0
+mcp==1.0.0
 python-multipart
 mcp
 instaloader
+playwright==1.40.0

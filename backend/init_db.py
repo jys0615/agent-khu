@@ -1,11 +1,9 @@
 """
 데이터베이스 초기화 및 샘플 데이터 삽입
 """
-
 import sys
 import os
 
-# 프로젝트 루트를 Python 경로에 추가
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import engine, SessionLocal
@@ -13,31 +11,46 @@ from app import models
 from parse_rooms import parse_all_rooms
 
 
+def normalize_code(code: str) -> str:
+    """코드 정규화"""
+    code_upper = code.upper()
+    
+    if code_upper.startswith('B'):
+        return code_upper
+    
+    if code_upper.replace('-', '').replace('A', '').replace('B', '').replace('C', '').replace('D', '').replace('E', '').isdigit():
+        return f"전{code}"
+    
+    return code
+
+
 def init_database():
     """데이터베이스 초기화"""
     print("🔧 데이터베이스 초기화 중...")
     
-    # 모든 테이블 생성
     models.Base.metadata.create_all(bind=engine)
     
     db = SessionLocal()
     
     try:
-        # 기존 강의실 데이터 삭제
         db.query(models.Classroom).delete()
         db.commit()
         
-        # 파싱된 공간 데이터 가져오기
         rooms = parse_all_rooms()
         
         print(f"📊 {len(rooms)}개 공간 데이터 삽입 중...")
         
-        # 공간 데이터 삽입
+        # 건물명 변경
+        BUILDING_NAME = "경희대학교 국제캠퍼스 전자정보대학관"
+        
         for room in rooms:
+            room_number = room['code']
+            code = normalize_code(room['code'])
+            
             classroom = models.Classroom(
-                code=f"전{room['code']}" if not room['code'].startswith(('B', 'b')) else room['code'].upper(),
-                building_name="전자정보대학관",
-                room_number=room['code'],
+                code=code,
+                building_name=BUILDING_NAME,  # 변경된 건물명
+                room_number=room_number,
                 floor=room['floor'],
                 room_name=room['name'],
                 room_type=room['room_type'],
@@ -51,7 +64,6 @@ def init_database():
         
         db.commit()
         
-        # 통계 출력
         total = db.query(models.Classroom).count()
         classrooms = db.query(models.Classroom).filter(models.Classroom.room_type == 'classroom').count()
         professor_offices = db.query(models.Classroom).filter(models.Classroom.room_type == 'professor_office').count()
@@ -64,12 +76,23 @@ def init_database():
         print(f"   - 연구실/실험실: {labs}개")
         print(f"   - 학생 접근 가능: {accessible}개")
         
-        # 공지사항 수 확인
+        print(f"\n📍 건물명: {BUILDING_NAME}")
+        
+        samples = db.query(models.Classroom).filter(
+            models.Classroom.room_type == 'classroom'
+        ).limit(3).all()
+        
+        print("\n샘플 데이터:")
+        for sample in samples:
+            print(f"   {sample.code} - {sample.building_name} {sample.room_number}호")
+        
         notice_count = db.query(models.Notice).count()
-        print(f"📢 공지사항 {notice_count}개 존재")
+        print(f"\n📢 공지사항 {notice_count}개 존재")
         
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
         raise
     finally:

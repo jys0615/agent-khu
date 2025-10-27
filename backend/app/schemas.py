@@ -1,71 +1,83 @@
-"""
-Pydantic 스키마
-"""
-
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
-from datetime import datetime
-
-
-class ClassroomBase(BaseModel):
-    code: str
-    building_name: str = "전자정보대학관"
-    room_number: str
-    floor: str
-    room_name: str
-    room_type: str
-    professor_name: Optional[str] = None
-    is_accessible: bool = True
-    keywords: Optional[str] = None
-    latitude: Optional[float] = 37.24195
-    longitude: Optional[float] = 127.07945
-
-
-class ClassroomCreate(ClassroomBase):
-    pass
-
-
-class Classroom(ClassroomBase):
-    id: int
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class NoticeBase(BaseModel):
-    notice_id: str
-    source: str
-    title: str
-    content: str
-    url: str
-    date: str
-    author: Optional[str] = None
-    views: Optional[int] = 0
-
-
-class NoticeCreate(NoticeBase):
-    pass
-
-
-class Notice(NoticeBase):
-    id: int
-    crawled_at: datetime
-    is_active: bool = True
-
-    model_config = ConfigDict(from_attributes=True)
-
+from typing import Optional, List
+from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
+class ClassroomInfo(BaseModel):
+    code: str
+    building_name: str
+    room_number: str
+    floor: str
+    room_name: str
+    room_type: str
+    professor_name: Optional[str]
+    is_accessible: bool
+    latitude: float
+    longitude: float
+
+class NoticeInfo(BaseModel):
+    title: str
+    url: str
+    date: str
+    author: Optional[str]
+    source: str
+    views: Optional[int]
+
+class MealInfo(BaseModel):
+    cafeteria: str
+    meal_type: str
+    menu: str
+    price: int
+
+class SeatInfo(BaseModel):
+    location: str
+    floor: Optional[str]
+    total: int
+    available: int
+    usage_rate: float
+
+class ShuttleInfo(BaseModel):
+    route: str
+    departure: str
+    arrival: str
+    next_time: Optional[str]
+    note: Optional[str]
+    weekday_times: Optional[List[str]]
+    weekend_times: Optional[List[str]]
+
+class CourseInfo(BaseModel):
+    """수강신청 과목 정보 (course-mcp)"""
+    code: str
+    name: str
+    professor: str
+    credits: int
+    time: str
+    classroom: str
+    classification: str
+
+class CurriculumCourse(BaseModel):
+    """교과과정 과목 정보 (curriculum-mcp)"""
+    year: str
+    code: str
+    name: str
+    credits: int
+    semester: str
+    prerequisites: List[str] = []
 
 class ChatResponse(BaseModel):
     message: str
-    classroom: Optional[Classroom] = None
+    classroom: Optional[ClassroomInfo] = None
     map_link: Optional[str] = None
     show_map_button: bool = False
-    notices: Optional[list[Notice]] = None
+    notices: Optional[List[NoticeInfo]] = None
     show_notices: bool = False
+    meals: Optional[List[MealInfo]] = None
+    seats: Optional[List[SeatInfo]] = None
+    shuttle: Optional[ShuttleInfo] = None
+    shuttles: Optional[List[ShuttleInfo]] = None
+    courses: Optional[List[CourseInfo]] = None  # 수강신청 과목 (course-mcp)
+    curriculum_courses: Optional[List[CurriculumCourse]] = None  # 교과과정 과목 (curriculum-mcp)
+    show_courses: bool = False  # 추가

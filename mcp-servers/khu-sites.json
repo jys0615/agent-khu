@@ -1,0 +1,93 @@
+{
+    "mcpServers": {
+        "khu-swedu": {
+            "url": "https://swedu.khu.ac.kr",
+            "name": "SW중심대학사업단",
+            "description": "경희대 SW중심대학사업단 공지사항 및 정보",
+            "crawlConfig": {
+                "maxDepth": 3,
+                "maxPages": 100,
+                "includePatterns": [
+                    "/bbs/board.php\\?bo_table=07_01.*"
+                ],
+                "excludePatterns": [
+                    "/login.*",
+                    "/write.*"
+                ],
+                "waitForSelector": ".td_subject",
+                "extractors": {
+                    "notices": {
+                        "selector": "tbody tr",
+                        "fields": {
+                            "title": ".td_subject a",
+                            "url": ".td_subject a @href",
+                            "date": ".td_datetime",
+                            "author": ".td_name",
+                            "views": "td:nth-child(4)"
+                        }
+                    }
+                }
+            }
+        },
+        "khu-cs": {
+            "url": "https://ce.khu.ac.kr",
+            "name": "컴퓨터공학부",
+            "description": "경희대 컴퓨터공학부 공지사항",
+            "crawlConfig": {
+                "maxDepth": 2,
+                "maxPages": 50,
+                "includePatterns": [
+                    "/ce/notice/.*"
+                ],
+                "extractors": {
+                    "notices": {
+                        "selector": ".board-list tbody tr",
+                        "fields": {
+                            "title": ".title a",
+                            "url": ".title a @href",
+                            "date": ".date"
+                        }
+                    }
+                }
+            }
+        },
+        "khu-library": {
+            "url": "https://library.khu.ac.kr",
+            "name": "도서관",
+            "description": "경희대 중앙도서관 정보",
+            "crawlConfig": {
+                "maxDepth": 2,
+                "maxPages": 30,
+                "extractors": {
+                    "seats": {
+                        "selector": ".seat-info",
+                        "fields": {
+                            "location": ".room-name",
+                            "available": ".available-seats",
+                            "total": ".total-seats"
+                        }
+                    }
+                }
+            }
+        },
+        "khu-dorm": {
+            "url": "https://khudorm.khu.ac.kr",
+            "name": "학생식당",
+            "description": "경희대 학식 메뉴",
+            "crawlConfig": {
+                "maxDepth": 1,
+                "maxPages": 10,
+                "extractors": {
+                    "meals": {
+                        "selector": ".menu-item",
+                        "fields": {
+                            "cafeteria": ".cafeteria-name",
+                            "menu": ".menu-text",
+                            "price": ".price"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
