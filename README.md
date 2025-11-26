@@ -13,13 +13,13 @@
 
 ## ✨ 주요 기능
 
-### 🤖 Agentic AI
+### Agentic AI
 Claude Sonnet 4가 **자율적으로** 필요한 정보를 찾아 답변합니다
 - **Tool-Use 패턴**: 상황에 맞는 MCP 서버를 자동 선택
 - **컨텍스트 누적**: 최대 5회 반복으로 복잡한 질문 처리
 - **자연어 이해**: 학생 의도 정확히 파악
 
-### 🎯 개인화
+### 개인화
 학번, 학과, 관심분야 기반 맞춤형 정보
 - **졸업요건 자동 계산**: 입학년도별 맞춤 요건
 - **수강 추천**: 관심분야 기반 과목 제안
@@ -372,7 +372,7 @@ in the Software without restriction...
 ## 📞 문의
 
 - **GitHub Issues**: [이슈 페이지](https://github.com/jys0615/agent-khu/issues)
-- **이메일**: [YOUR_EMAIL]
+- **이메일**: jys0615234@gmail.com
 
 ---
 
@@ -386,7 +386,7 @@ in the Software without restriction...
 
 <div align="center">
 
-**Made with ❤️ by [YOUR_NAME]**
+**Made with ❤️ by jys0615**
 
 [Documentation](docs/) • [Issues](https://github.com/jys0615/agent-khu/issues) • [Discussions](https://github.com/jys0615/agent-khu/discussions)
 
