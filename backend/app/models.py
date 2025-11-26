@@ -121,3 +121,63 @@ class Course(Base):
         Index('idx_course_search', 'course_name', 'professor'),
         Index('idx_semester', 'year', 'semester'),
     )
+
+
+class User(Base):
+    """사용자 정보"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(String(20), unique=True, nullable=False, index=True)  # 학번
+    password_hash = Column(String(255), nullable=False)  # bcrypt 해시
+    
+    # 기본 정보 (필수)
+    department = Column(String(100), nullable=False)  # 학과
+    campus = Column(String(20), nullable=False)  # "국제캠퍼스" or "서울캠퍼스"
+    admission_year = Column(Integer, nullable=False)  # 입학년도 (학번에서 파싱)
+    
+    # 선택 정보
+    name = Column(String(100))  # 이름 (선택)
+    current_grade = Column(Integer)  # 현재 학년 (1-4)
+    double_major = Column(String(100))  # 다전공
+    minor = Column(String(100))  # 부전공
+    
+    # JSON 필드
+    interests = Column(Text)  # JSON: ["AI", "백엔드", "클라우드"]
+    completed_credits = Column(Integer, default=0)  # 이수 학점
+    preferences = Column(Text)  # JSON: 사용자 설정
+    
+    # 타임스탬프
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, onupdate=datetime.now)
+    last_login = Column(DateTime)
+    
+    # 인덱스
+    __table_args__ = (
+        Index('idx_student_id', 'student_id'),
+        Index('idx_department_year', 'department', 'admission_year'),
+    )
+
+
+class Curriculum(Base):
+    """졸업요건 정보"""
+    __tablename__ = "curriculums"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    department = Column(String(100), nullable=False)
+    admission_year = Column(Integer, nullable=False)
+    
+    # JSON 필드: 졸업요건
+    requirements = Column(Text, nullable=False)  # JSON 형식
+    # {
+    #   "total_credits": 130,
+    #   "major_required": 60,
+    #   "major_elective": 18,
+    #   ...
+    # }
+    
+    created_at = Column(DateTime, default=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_curriculum', 'department', 'admission_year'),
+    )

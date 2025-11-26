@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from . import models, schemas
 from typing import List, Optional
-
+from datetime import datetime
 
 def get_classroom_by_code(db: Session, code: str) -> Optional[models.Classroom]:
     """강의실 코드로 조회"""
@@ -268,3 +268,120 @@ def bulk_create_courses(db: Session, courses_data: List[dict]):
             db.add(course_obj)
     
     db.commit()
+
+# crud.py에 추가
+
+import json
+from passlib.context import CryptContext
+
+# 비밀번호 해싱
+pwd_context = CryptContext(
+    schemes=["bcrypt"], 
+    deprecated="auto",
+    bcrypt__rounds=12
+)
+
+def hash_password(password: str) -> str:
+    """비밀번호 해싱"""
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """비밀번호 검증"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+# User CRUD
+def get_user_by_student_id(db: Session, student_id: str) -> Optional[models.User]:
+    """학번으로 사용자 조회"""
+    return db.query(models.User).filter(models.User.student_id == student_id).first()
+
+
+def create_user(db: Session, user_data: dict) -> models.User:
+    """사용자 생성"""
+    # 학번에서 입학년도 추출
+    admission_year = int(user_data["student_id"][:4])
+    
+    # 비밀번호 해싱
+    password_hash = hash_password(user_data["password"])
+    
+    user = models.User(
+        student_id=user_data["student_id"],
+        password_hash=password_hash,
+        department=user_data["department"],
+        campus=user_data["campus"],
+        admission_year=admission_year,
+        interests=json.dumps([]),  # 빈 배열로 초기화
+        preferences=json.dumps({})  # 빈 객체로 초기화
+    )
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return user
+
+
+def update_user_profile(db: Session, user_id: int, profile_data: dict) -> Optional[models.User]:
+    """사용자 프로필 업데이트"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    
+    if not user:
+        return None
+    
+    # 업데이트 가능한 필드
+    if "current_grade" in profile_data:
+        user.current_grade = profile_data["current_grade"]
+    
+    if "interests" in profile_data:
+        user.interests = json.dumps(profile_data["interests"])
+    
+    if "completed_credits" in profile_data:
+        user.completed_credits = profile_data["completed_credits"]
+    
+    if "double_major" in profile_data:
+        user.double_major = profile_data["double_major"]
+    
+    if "minor" in profile_data:
+        user.minor = profile_data["minor"]
+    
+    if "preferences" in profile_data:
+        user.preferences = json.dumps(profile_data["preferences"])
+    
+    user.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(user)
+    
+    return user
+
+
+def update_last_login(db: Session, user_id: int):
+    """마지막 로그인 시간 업데이트"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user:
+        user.last_login = datetime.now()
+        db.commit()
+
+
+# Curriculum CRUD
+def get_curriculum(db: Session, department: str, admission_year: int) -> Optional[models.Curriculum]:
+    """졸업요건 조회"""
+    return db.query(models.Curriculum).filter(
+        models.Curriculum.department == department,
+        models.Curriculum.admission_year == admission_year
+    ).first()
+
+
+def create_curriculum(db: Session, curriculum_data: dict) -> models.Curriculum:
+    """졸업요건 생성"""
+    curriculum = models.Curriculum(
+        department=curriculum_data["department"],
+        admission_year=curriculum_data["admission_year"],
+        requirements=json.dumps(curriculum_data["requirements"])
+    )
+    
+    db.add(curriculum)
+    db.commit()
+    db.refresh(curriculum)
+    
+    return curriculum

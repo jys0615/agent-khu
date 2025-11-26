@@ -1,178 +1,208 @@
 #!/usr/bin/env python3
 """
-소프트웨어융합대학 교과과정 PDF 스크래퍼
+Curriculum Scraper - 정확한 컬럼 인덱스 사용
 """
+from __future__ import annotations
+import re
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional
 
 import requests
-from bs4 import BeautifulSoup
-import json
-import re
-from pathlib import Path
-import PyPDF2
-from typing import List, Dict, Any
-import io
+from lxml import html as lxml_html
 
-class CurriculumScraper:
-    def __init__(self):
-        self.base_url = "https://software.khu.ac.kr"
-        self.list_url = f"{self.base_url}/software/user/bbs/BMSR00048/list.do?menuNo=1700015"
-        self.data_dir = Path(__file__).parent.parent / "data"
-        self.data_dir.mkdir(exist_ok=True)
+# 저장 경로
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "curriculum_data.json"
+
+
+def scrape_ce_curriculum(url: str = "https://ce.khu.ac.kr/ce/user/contents/view.do?menuNo=1600054") -> dict:
+    """컴퓨터공학과 교과과정 크롤링 - 정확한 컬럼 인덱스 사용"""
+    print(f"🔄 크롤링 시작: {url}")
+    
+    try:
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
         
-    def get_pdf_links(self) -> List[Dict[str, str]]:
-        """교과과정 PDF 링크 목록 가져오기"""
-        response = requests.get(self.list_url)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        doc = lxml_html.fromstring(resp.text)
+        tables = doc.xpath("//table")
         
-        pdf_links = []
+        catalog = []
         
-        # JavaScript view() 함수에서 ID 추출
-        # 예: javascript:view('412977');
-        for link in soup.find_all('a', href=re.compile(r"javascript:view")):
-            text = link.get_text(strip=True)
-            href = link.get('href')
+        for table in tables:
+            rows = table.xpath(".//tr")
+            if len(rows) < 2:
+                continue
             
-            # ID 추출
-            match = re.search(r"view\('(\d+)'\)", href)
-            if match:
-                doc_id = match.group(1)
-                year_match = re.search(r'(\d{4})학년도', text)
-                
-                if year_match:
-                    year = year_match.group(1)
-                    pdf_links.append({
-                        'year': year,
-                        'title': text,
-                        'doc_id': doc_id,
-                        'download_url': f"{self.base_url}/software/user/bbs/BMSR00048/view.do?bbsSeq={doc_id}"
-                    })
-        
-        return sorted(pdf_links, key=lambda x: x['year'], reverse=True)
-    
-    def download_pdf(self, doc_id: str, year: str) -> bytes:
-        """PDF 파일 다운로드"""
-        # 실제 다운로드 URL 구성 (사이트 구조에 따라 조정 필요)
-        view_url = f"{self.base_url}/software/user/bbs/BMSR00048/view.do?bbsSeq={doc_id}"
-        
-        # 먼저 상세 페이지 접근
-        session = requests.Session()
-        response = session.get(view_url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # 첨부파일 링크 찾기
-        for link in soup.find_all('a', href=True):
-            href = link.get('href')
-            if 'download' in href.lower() or href.endswith('.pdf'):
-                pdf_url = self.base_url + href if href.startswith('/') else href
-                pdf_response = session.get(pdf_url)
-                
-                if pdf_response.status_code == 200:
-                    # PDF 파일 저장
-                    pdf_path = self.data_dir / f"curriculum_{year}.pdf"
-                    with open(pdf_path, 'wb') as f:
-                        f.write(pdf_response.content)
-                    print(f"✅ {year}학년도 PDF 다운로드 완료: {pdf_path}")
-                    return pdf_response.content
-        
-        print(f"⚠️ {year}학년도 PDF 다운로드 실패")
-        return None
-    
-    def parse_pdf_text(self, pdf_content: bytes) -> str:
-        """PDF에서 텍스트 추출"""
-        try:
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
-            text = ""
-            for page in pdf_reader.pages:
-                text += page.extract_text()
-            return text
-        except Exception as e:
-            print(f"PDF 파싱 에러: {e}")
-            return ""
-    
-    def parse_courses(self, text: str, year: str) -> List[Dict[str, Any]]:
-        """텍스트에서 과목 정보 추출"""
-        courses = []
-        
-        # 과목 정보 패턴 (실제 PDF 구조에 맞게 조정 필요)
-        # 예: "SWE001 | 프로그래밍기초 | 3학점 | 1학년 1학기"
-        
-        lines = text.split('\n')
-        for i, line in enumerate(lines):
-            line = line.strip()
+            # 헤더 확인
+            header = rows[0]
+            headers = [td.text_content().strip() for td in header.xpath(".//th|.//td")]
+            header_text = " ".join(headers)
             
-            # 과목코드 패턴 찾기 (예: SWE001, CSE101 등)
-            if re.match(r'^[A-Z]{3}\d{3,4}', line):
-                parts = line.split('|')
+            # 교과목 테이블인지 확인
+            if not any(kw in header_text for kw in ["교과목", "학수번호", "학점"]):
+                continue
+            
+            print(f"\n✅ 교과목 테이블 발견!")
+            print(f"📋 헤더: {headers[:15]}")
+            
+            # 데이터 파싱
+            last_group = ""  # rowspan 처리용
+            
+            for idx, row in enumerate(rows[1:]):
+                cells = [td.text_content().strip() for td in row.xpath(".//td")]
                 
-                if len(parts) >= 3:
-                    course = {
-                        'year': year,
-                        'code': parts[0].strip(),
-                        'name': parts[1].strip() if len(parts) > 1 else '',
-                        'credits': self._extract_credits(parts[2]) if len(parts) > 2 else 3,
-                        'semester': self._extract_semester(parts[3]) if len(parts) > 3 else '',
-                        'prerequisites': []
+                if len(cells) < 4:
+                    continue
+                
+                try:
+                    # rowspan 감지: 15개면 정상, 14개면 rowspan 중
+                    has_group_col = (len(cells) >= 15)
+                    
+                    if has_group_col:
+                        # 정상 행 (이수구분 포함)
+                        group = cells[1]
+                        name = cells[2]
+                        code = cells[3]
+                        credits_str = cells[4]
+                        sem1_idx = 10
+                        sem2_idx = 11
+                        last_group = group  # 저장
+                    else:
+                        # rowspan 행 (이수구분 생략됨)
+                        group = last_group  # 이전 값 사용
+                        name = cells[1]     # 한 칸 앞으로
+                        code = cells[2]
+                        credits_str = cells[3]
+                        sem1_idx = 9        # 한 칸 앞으로
+                        sem2_idx = 10
+                    
+                    # 디버그 (처음 10개만)
+                    if idx < 10:
+                        print(f"\n🔍 Row {idx+1}: cells={len(cells)}개, rowspan={'없음' if has_group_col else '적용중'}")
+                        print(f"   이수구분: {group}")
+                        print(f"   교과목명: {name}")
+                        print(f"   학수번호: {code}")
+                        print(f"   학점: {credits_str}")
+                        if len(cells) > sem1_idx:
+                            print(f"   [{sem1_idx}] 1학기: '{cells[sem1_idx]}'")
+                        if len(cells) > sem2_idx:
+                            print(f"   [{sem2_idx}] 2학기: '{cells[sem2_idx]}'")
+                    
+                    # 학점 파싱
+                    credits = 3
+                    try:
+                        match = re.search(r'\d+', credits_str)
+                        if match:
+                            credits = int(match.group())
+                    except:
+                        pass
+                    
+                    # 학기 정보
+                    semesters = []
+                    if len(cells) > sem1_idx and "○" in cells[sem1_idx]:
+                        semesters.append("1")
+                    if len(cells) > sem2_idx and "○" in cells[sem2_idx]:
+                        semesters.append("2")
+                    
+                    # 유효성
+                    if not code or not name:
+                        continue
+                    
+                    item = {
+                        "code": code,
+                        "name": name,
+                        "credits": credits,
+                        "group": group,
+                        "semesters": semesters
                     }
-                    courses.append(course)
-        
-        return courses
-    
-    def _extract_credits(self, text: str) -> int:
-        """학점 추출"""
-        match = re.search(r'(\d+)\s*학점', text)
-        return int(match.group(1)) if match else 3
-    
-    def _extract_semester(self, text: str) -> str:
-        """학기 정보 추출"""
-        if '1학기' in text:
-            return '1학기'
-        elif '2학기' in text:
-            return '2학기'
-        return ''
-    
-    def scrape_all(self) -> Dict[str, Any]:
-        """모든 교과과정 스크래핑"""
-        print("🔍 교과과정 PDF 링크 수집 중...")
-        pdf_links = self.get_pdf_links()
-        
-        all_courses = {}
-        
-        for link in pdf_links[:3]:  # 최근 3개년도만
-            year = link['year']
-            doc_id = link['doc_id']
-            
-            print(f"\n📄 {year}학년도 교과과정 다운로드 중...")
-            pdf_content = self.download_pdf(doc_id, year)
-            
-            if pdf_content:
-                print(f"📖 {year}학년도 PDF 파싱 중...")
-                text = self.parse_pdf_text(pdf_content)
+                    
+                    catalog.append(item)
+                    
+                    if idx < 10:
+                        print(f"   ✅ 파싱 완료: code={code}, name={name}, semesters={semesters}")
                 
-                print(f"🔎 {year}학년도 과목 정보 추출 중...")
-                courses = self.parse_courses(text, year)
-                
-                all_courses[year] = {
-                    'year': year,
-                    'total_courses': len(courses),
-                    'courses': courses,
-                    'raw_text': text[:1000]  # 처음 1000자만 저장
-                }
-                
-                print(f"✅ {year}학년도: {len(courses)}개 과목 추출 완료")
+                except Exception as e:
+                    if idx < 10:
+                        print(f"   ❌ 에러: {e}")
+                        import traceback
+                        traceback.print_exc()
+                    continue
         
-        # JSON 저장
-        output_file = self.data_dir / "curriculum_data.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(all_courses, f, ensure_ascii=False, indent=2)
+        print(f"\n✅ 크롤링 완료: {len(catalog)}개 과목")
         
-        print(f"\n💾 데이터 저장 완료: {output_file}")
-        return all_courses
+        # 자료구조 확인
+        for item in catalog:
+            if item["code"] == "CSE204":
+                print(f"\n🎯 자료구조 발견: {json.dumps(item, ensure_ascii=False, indent=2)}")
+                break
+        
+        return {
+            "year": "2024",
+            "catalog": catalog,
+            "crawled_at": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        print(f"❌ 크롤링 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+
+
+def save_data(data: dict) -> None:
+    """데이터 저장"""
+    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    
+    with open(DATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    print(f"\n💾 저장 완료: {DATA_PATH}")
+
+
+def main():
+    """메인 실행"""
+    # 크롤링
+    new_catalog = scrape_ce_curriculum()
+    
+    if not new_catalog or not new_catalog.get("catalog"):
+        print("⚠️ 크롤링 실패")
+        return
+    
+    # 졸업요건 (기본값)
+    programs = {
+        "KHU-CSE": {
+            "name": "컴퓨터공학전공",
+            "total_credits": 130,
+            "groups": [
+                {"key": "major_basic", "name": "전공기초", "min_credits": 12},
+                {"key": "major_core", "name": "전공필수", "min_credits": 48},
+                {"key": "major_elective", "name": "전공선택", "min_credits": 24},
+                {"key": "liberal_core", "name": "핵심교양", "min_credits": 15}
+            ],
+            "policies": {
+                "english_major_courses_required": 3
+            }
+        }
+    }
+    
+    # 최종 데이터 구성
+    final_data = {
+        "2024": {
+            "year": "2024",
+            "programs": programs,
+            "catalog": new_catalog["catalog"],
+            "crawled_at": new_catalog["crawled_at"]
+        }
+    }
+    
+    # 저장
+    save_data(final_data)
+    
+    print("\n" + "="*50)
+    print(f"✅ 전체 작업 완료: {len(new_catalog['catalog'])}개 과목")
+    print("="*50)
 
 
 if __name__ == "__main__":
-    scraper = CurriculumScraper()
-    result = scraper.scrape_all()
-    
-    print(f"\n📊 스크래핑 결과:")
-    for year, data in result.items():
-        print(f"  {year}학년도: {data['total_courses']}개 과목")
+    main()

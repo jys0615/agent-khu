@@ -1,0 +1,47 @@
+{
+  "libraries": {
+    "seoul": {
+      "name": "중앙도서관",
+      "campus": "서울캠퍼스",
+      "address": "서울특별시 동대문구 경희대로 26",
+      "phone": "02-961-0072",
+      "hours": {
+        "weekday": "24시간 (출입통제구역 제외)",
+        "weekend": "24시간 (출입통제구역 제외)"
+      },
+      "floors": [
+        {
+          "name": "1F 제1열람실",
+          "total_seats": 406,
+          "hours": "00:00-24:00"
+        },
+        {
+          "name": "1F 멋터",
+          "total_seats": 152,
+          "hours": "06:00-24:00"
+        },
+        {
+          "name": "2F 제품",
+          "total_seats": 188,
+          "hours": "06:00-24:00"
+        },
+        {
+          "name": "2F 제2열람실",
+          "total_seats": 326,
+          "hours": "06:00-24:00"
+        }
+      ]
+    },
+    "global": {
+      "name": "국제캠퍼스 도서관",
+      "campus": "국제캠퍼스",
+      "address": "경기도 용인시 기흥구 덕영대로 1732",
+      "phone": "031-201-3210",
+      "hours": {
+        "weekday": "09:00-22:00",
+        "weekend": "09:00-18:00"
+      },
+      "floors": []
+    }
+  }
+}

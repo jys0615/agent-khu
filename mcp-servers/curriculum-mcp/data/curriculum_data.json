@@ -1,187 +1,2149 @@
 {
-    "2024": {
-        "year": "2024",
-        "total_courses": 15,
-        "courses": [
-            {
-                "year": "2024",
-                "code": "SWE2001",
-                "name": "자료구조",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": [
-                    "프로그래밍기초"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE2002",
-                "name": "알고리즘",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "자료구조"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE2003",
-                "name": "데이터베이스",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": []
-            },
-            {
-                "year": "2024",
-                "code": "SWE3001",
-                "name": "운영체제",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "자료구조"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE3002",
-                "name": "컴퓨터네트워크",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": []
-            },
-            {
-                "year": "2024",
-                "code": "SWE3003",
-                "name": "소프트웨어공학",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": []
-            },
-            {
-                "year": "2024",
-                "code": "SWE4001",
-                "name": "인공지능",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": [
-                    "알고리즘",
-                    "확률및통계"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE4002",
-                "name": "머신러닝",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "인공지능"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE4003",
-                "name": "딥러닝",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": [
-                    "머신러닝"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE1001",
-                "name": "프로그래밍기초",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": []
-            },
-            {
-                "year": "2024",
-                "code": "SWE1002",
-                "name": "객체지향프로그래밍",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "프로그래밍기초"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE2004",
-                "name": "웹프로그래밍",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": [
-                    "프로그래밍기초"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE3004",
-                "name": "모바일프로그래밍",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "객체지향프로그래밍"
-                ]
-            },
-            {
-                "year": "2024",
-                "code": "SWE4004",
-                "name": "캡스톤디자인",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": []
-            },
-            {
-                "year": "2024",
-                "code": "SWE4005",
-                "name": "졸업프로젝트",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "캡스톤디자인"
-                ]
-            }
+  "2019": {
+    "year": "2019",
+    "catalog": [
+      {
+        "code": "AMTH1001",
+        "name": "미분방정식",
+        "credits": 3,
+        "group": "전공 기초",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "AMTH1004",
+        "credits": 3,
+        "group": "선형대수",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "AMTH1009",
+        "credits": 3,
+        "group": "미분적분학",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "EE211",
+        "credits": 3,
+        "group": "확률및랜덤변수",
+        "semesters": []
+      },
+      {
+        "code": "CSE103",
+        "name": "객체지향프로그래밍",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "3",
+        "name": "CSE203",
+        "credits": 3,
+        "group": "컴퓨터구조",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE204",
+        "credits": 2,
+        "group": "자료구조",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE301",
+        "credits": 3,
+        "group": "운영체제",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE302",
+        "credits": 3,
+        "group": "컴퓨터네트워크",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE304",
+        "credits": 2,
+        "group": "알고리즘",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE305",
+        "credits": 3,
+        "group": "데이터베이스",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE327",
+        "credits": 3,
+        "group": "소프트웨어공학",
+        "semesters": []
+      },
+      {
+        "code": "0",
+        "name": "CSE403",
+        "credits": 0,
+        "group": "졸업논문(컴퓨터공학)",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE405",
+        "credits": 0,
+        "group": "졸업프로젝트",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE406",
+        "credits": 0,
+        "group": "캡스톤디자인",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "EE209",
+        "credits": 3,
+        "group": "논리회로",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON104",
+        "credits": 2,
+        "group": "웹/파이선프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON201",
+        "credits": 3,
+        "group": "오픈소스SW개발방법및도구",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON253",
+        "credits": 2,
+        "group": "기계학습",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "AI1002",
+        "name": "인공지능프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "3",
+        "name": "AI3001",
+        "credits": 3,
+        "group": "고급딥러닝",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "AI3004",
+        "credits": 3,
+        "group": "빅데이터마이닝",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE104",
+        "credits": 3,
+        "group": "실감미디어컴퓨팅기초",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE201",
+        "credits": 3,
+        "group": "이산구조",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE224",
+        "credits": 3,
+        "group": "UI/UX프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE322",
+        "credits": 3,
+        "group": "컴파일러",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE324",
+        "credits": 3,
+        "group": "메타버스시스템",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE328",
+        "credits": 3,
+        "group": "프로그래밍언어론",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE330",
+        "credits": 3,
+        "group": "SW스타트업비즈니스",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE331",
+        "credits": 3,
+        "group": "딥러닝",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE332",
+        "credits": 2,
+        "group": "리눅스시스템프로그래밍",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "3",
+        "name": "CSE334",
+        "credits": 0,
+        "group": "SW스타트업프로젝트",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE335",
+        "credits": 3,
+        "group": "클라우드컴퓨팅",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE340",
+        "credits": 0,
+        "group": "실전기계학습",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE4100",
+        "credits": 3,
+        "group": "블록체인프로젝트",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE423",
+        "credits": 3,
+        "group": "정보보호",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE426",
+        "credits": 3,
+        "group": "영상처리",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE428",
+        "credits": 3,
+        "group": "컴퓨터그래픽스",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE430",
+        "credits": 3,
+        "group": "메타버스테이터처리",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE431",
+        "credits": 3,
+        "group": "인간-컴퓨터상호작용",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE434",
+        "credits": 3,
+        "group": "빅데이터프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE436",
+        "credits": 0,
+        "group": "빅데이터프로젝트",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE437",
+        "credits": 0,
+        "group": "클라우드프로젝트",
+        "semesters": []
+      },
+      {
+        "code": "2",
+        "name": "CSE438",
+        "credits": 2,
+        "group": "최신기술콜로키움1",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE439",
+        "credits": 2,
+        "group": "AIoT디지털시스템",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "3",
+        "name": "CSE440",
+        "credits": 2,
+        "group": "AIoT소프트웨어",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "3",
+        "name": "CSE441",
+        "credits": 3,
+        "group": "컴퓨터비젼",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE442",
+        "credits": 3,
+        "group": "블록체인",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE443",
+        "credits": 3,
+        "group": "AI네트워킹",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE444",
+        "credits": 3,
+        "group": "AIoT네트워크",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE450",
+        "credits": 3,
+        "group": "모바일/웹서비스프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE451",
+        "credits": 3,
+        "group": "모바일/웹서비스프로젝트",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE452",
+        "credits": 3,
+        "group": "소프트웨어보안",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE453",
+        "credits": 3,
+        "group": "웹보안",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE495",
+        "credits": 0,
+        "group": "독립심화학습1(컴퓨터공학과)",
+        "semesters": []
+      },
+      {
+        "code": "1",
+        "name": "CSE496",
+        "credits": 0,
+        "group": "연구연수활동1",
+        "semesters": []
+      },
+      {
+        "code": "1",
+        "name": "CSE497",
+        "credits": 0,
+        "group": "연구연수활동2",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "CSE499",
+        "credits": 0,
+        "group": "독립심화학습2(컴퓨터공학과)",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "EE210",
+        "credits": 3,
+        "group": "신호와시스템",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON103",
+        "credits": 2,
+        "group": "디자인적사고",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON211",
+        "credits": 2,
+        "group": "게임프로그래밍입문",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON212",
+        "credits": 2,
+        "group": "게인엔진기초",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON221",
+        "credits": 2,
+        "group": "마이크로서비스프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON254",
+        "credits": 3,
+        "group": "회로와신호",
+        "semesters": []
+      },
+      {
+        "code": "2",
+        "name": "SWCON302",
+        "credits": 2,
+        "group": "최신기술콜로키움2",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON311",
+        "credits": 2,
+        "group": "게임그래픽프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON312",
+        "credits": 2,
+        "group": "게임인터랙티브테크놀로지",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "3",
+        "name": "SWCON313",
+        "credits": 2,
+        "group": "가상/증강현실이론및실습",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON331",
+        "credits": 3,
+        "group": "로봇프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON366",
+        "credits": 3,
+        "group": "3D데이터처리",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON370",
+        "credits": 3,
+        "group": "풀스택서비스프로그래밍",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON491",
+        "credits": 2,
+        "group": "인공지능과게임프로그래밍",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "3",
+        "name": "SWCON492",
+        "credits": 3,
+        "group": "풀스택서비스네트워킹",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON493",
+        "credits": 3,
+        "group": "자연언어처리",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON496",
+        "credits": 3,
+        "group": "소프트웨어융합보안",
+        "semesters": []
+      },
+      {
+        "code": "3",
+        "name": "SWCON495",
+        "credits": 0,
+        "group": "강화학습",
+        "semesters": []
+      },
+      {
+        "code": "*1) 3/12",
+        "name": "",
+        "credits": 0,
+        "group": "창업현장실습",
+        "semesters": []
+      },
+      {
+        "code": "*1) 3/6",
+        "name": "",
+        "credits": 0,
+        "group": "단기현장실습",
+        "semesters": []
+      },
+      {
+        "code": "*1) 9/12",
+        "name": "",
+        "credits": 0,
+        "group": "장기현장실습",
+        "semesters": []
+      }
+    ],
+    "programs": {
+      "KHU-CSE": {
+        "name": "컴퓨터공학전공",
+        "total_credits": 0,
+        "groups": [
+          {
+            "key": "major_basic",
+            "name": "전공기초",
+            "min_credits": 0
+          },
+          {
+            "key": "major_core",
+            "name": "전공필수",
+            "min_credits": 0
+          },
+          {
+            "key": "major_elective",
+            "name": "전공선택",
+            "min_credits": 0
+          },
+          {
+            "key": "liberal_core",
+            "name": "핵심교양",
+            "min_credits": 0
+          }
         ],
-        "raw_text": "소프트웨어융합대학 2024학년도 교육과정..."
+        "policies": {
+          "english_major_courses_required": 3
+        }
+      },
+      "KHU-AI": {
+        "name": "인공지능전공",
+        "total_credits": 0,
+        "groups": [
+          {
+            "key": "major_basic",
+            "name": "전공기초",
+            "min_credits": 0
+          },
+          {
+            "key": "major_core",
+            "name": "전공필수",
+            "min_credits": 0
+          },
+          {
+            "key": "major_elective",
+            "name": "전공선택",
+            "min_credits": 0
+          },
+          {
+            "key": "liberal_core",
+            "name": "핵심교양",
+            "min_credits": 0
+          }
+        ],
+        "policies": {
+          "english_major_courses_required": 3
+        }
+      }
     },
-    "2023": {
-        "year": "2023",
-        "total_courses": 14,
-        "courses": [
-            {
-                "year": "2023",
-                "code": "SWE2001",
-                "name": "자료구조",
-                "credits": 3,
-                "semester": "1학기",
-                "prerequisites": [
-                    "프로그래밍기초"
-                ]
-            },
-            {
-                "year": "2023",
-                "code": "SWE2002",
-                "name": "알고리즘",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "자료구조"
-                ]
-            },
-            {
-                "year": "2023",
-                "code": "SWE3001",
-                "name": "운영체제",
-                "credits": 3,
-                "semester": "2학기",
-                "prerequisites": [
-                    "자료구조"
-                ]
-            }
-        ],
-        "raw_text": "소프트웨어융합대학 2023학년도 교육과정..."
+    "mapping": {
+      "aliases": {},
+      "prereqs": {}
+    },
+    "meta": {
+      "source": "CE:https://ce.khu.ac.kr/ce/user/contents/view.do?menuNo=1600054",
+      "built_at": "2025-10-28T00:24:56.238563"
     }
+  },
+  "2024": {
+    "year": "2024",
+    "programs": {
+      "KHU-CSE": {
+        "name": "컴퓨터공학전공",
+        "total_credits": 130,
+        "groups": [
+          {
+            "key": "major_basic",
+            "name": "전공기초",
+            "min_credits": 12
+          },
+          {
+            "key": "major_core",
+            "name": "전공필수",
+            "min_credits": 48
+          },
+          {
+            "key": "major_elective",
+            "name": "전공선택",
+            "min_credits": 24
+          },
+          {
+            "key": "liberal_core",
+            "name": "핵심교양",
+            "min_credits": 15
+          }
+        ],
+        "policies": {
+          "english_major_courses_required": 3
+        }
+      }
+    },
+    "catalog": [
+      {
+        "code": "AMTH1001",
+        "name": "미분방정식",
+        "credits": 3,
+        "group": "전공 기초",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "AMTH1004",
+        "name": "3",
+        "credits": 3,
+        "group": "선형대수",
+        "semesters": []
+      },
+      {
+        "code": "AMTH1009",
+        "name": "3",
+        "credits": 3,
+        "group": "미분적분학",
+        "semesters": []
+      },
+      {
+        "code": "EE211",
+        "name": "3",
+        "credits": 3,
+        "group": "확률및랜덤변수",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE103",
+        "name": "객체지향프로그래밍",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE203",
+        "name": "3",
+        "credits": 3,
+        "group": "컴퓨터구조",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE204",
+        "name": "3",
+        "credits": 2,
+        "group": "자료구조",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE301",
+        "name": "3",
+        "credits": 3,
+        "group": "운영체제",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE302",
+        "name": "3",
+        "credits": 3,
+        "group": "컴퓨터네트워크",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE304",
+        "name": "3",
+        "credits": 2,
+        "group": "알고리즘",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE305",
+        "name": "3",
+        "credits": 3,
+        "group": "데이터베이스",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE327",
+        "name": "3",
+        "credits": 3,
+        "group": "소프트웨어공학",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE403",
+        "name": "0",
+        "credits": 3,
+        "group": "졸업논문(컴퓨터공학)",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE405",
+        "name": "3",
+        "credits": 3,
+        "group": "졸업프로젝트",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE406",
+        "name": "3",
+        "credits": 3,
+        "group": "캡스톤디자인",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "EE209",
+        "name": "3",
+        "credits": 3,
+        "group": "논리회로",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON104",
+        "name": "3",
+        "credits": 2,
+        "group": "웹/파이선프로그래밍",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON201",
+        "name": "3",
+        "credits": 3,
+        "group": "오픈소스SW개발방법및도구",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON253",
+        "name": "3",
+        "credits": 2,
+        "group": "기계학습",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "AI1002",
+        "name": "인공지능프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "AI3001",
+        "name": "3",
+        "credits": 3,
+        "group": "고급딥러닝",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "AI3004",
+        "name": "3",
+        "credits": 3,
+        "group": "빅데이터마이닝",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE104",
+        "name": "3",
+        "credits": 3,
+        "group": "실감미디어컴퓨팅기초",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE201",
+        "name": "3",
+        "credits": 3,
+        "group": "이산구조",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE224",
+        "name": "3",
+        "credits": 3,
+        "group": "UI/UX프로그래밍",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE322",
+        "name": "3",
+        "credits": 3,
+        "group": "컴파일러",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE324",
+        "name": "3",
+        "credits": 3,
+        "group": "메타버스시스템",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE328",
+        "name": "3",
+        "credits": 3,
+        "group": "프로그래밍언어론",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE330",
+        "name": "3",
+        "credits": 3,
+        "group": "SW스타트업비즈니스",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE331",
+        "name": "3",
+        "credits": 3,
+        "group": "딥러닝",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE332",
+        "name": "3",
+        "credits": 2,
+        "group": "리눅스시스템프로그래밍",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE334",
+        "name": "3",
+        "credits": 3,
+        "group": "SW스타트업프로젝트",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE335",
+        "name": "3",
+        "credits": 3,
+        "group": "클라우드컴퓨팅",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE340",
+        "name": "3",
+        "credits": 3,
+        "group": "실전기계학습",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE4100",
+        "name": "3",
+        "credits": 3,
+        "group": "블록체인프로젝트",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE423",
+        "name": "3",
+        "credits": 3,
+        "group": "정보보호",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE426",
+        "name": "3",
+        "credits": 3,
+        "group": "영상처리",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE428",
+        "name": "3",
+        "credits": 3,
+        "group": "컴퓨터그래픽스",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE430",
+        "name": "3",
+        "credits": 3,
+        "group": "메타버스테이터처리",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE431",
+        "name": "3",
+        "credits": 3,
+        "group": "인간-컴퓨터상호작용",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE434",
+        "name": "3",
+        "credits": 3,
+        "group": "빅데이터프로그래밍",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE436",
+        "name": "3",
+        "credits": 3,
+        "group": "빅데이터프로젝트",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE437",
+        "name": "3",
+        "credits": 3,
+        "group": "클라우드프로젝트",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE438",
+        "name": "2",
+        "credits": 2,
+        "group": "최신기술콜로키움1",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE439",
+        "name": "3",
+        "credits": 2,
+        "group": "AIoT디지털시스템",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE440",
+        "name": "3",
+        "credits": 2,
+        "group": "AIoT소프트웨어",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE441",
+        "name": "3",
+        "credits": 3,
+        "group": "컴퓨터비젼",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE442",
+        "name": "3",
+        "credits": 3,
+        "group": "블록체인",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE443",
+        "name": "3",
+        "credits": 3,
+        "group": "AI네트워킹",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE444",
+        "name": "3",
+        "credits": 3,
+        "group": "AIoT네트워크",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE450",
+        "name": "3",
+        "credits": 3,
+        "group": "모바일/웹서비스프로그래밍",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE451",
+        "name": "3",
+        "credits": 3,
+        "group": "모바일/웹서비스프로젝트",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE452",
+        "name": "3",
+        "credits": 3,
+        "group": "소프트웨어보안",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE453",
+        "name": "3",
+        "credits": 3,
+        "group": "웹보안",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE495",
+        "name": "3",
+        "credits": 3,
+        "group": "독립심화학습1(컴퓨터공학과)",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE496",
+        "name": "1",
+        "credits": 3,
+        "group": "연구연수활동1",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE497",
+        "name": "1",
+        "credits": 3,
+        "group": "연구연수활동2",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE499",
+        "name": "3",
+        "credits": 3,
+        "group": "독립심화학습2(컴퓨터공학과)",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "EE210",
+        "name": "3",
+        "credits": 3,
+        "group": "신호와시스템",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON103",
+        "name": "3",
+        "credits": 2,
+        "group": "디자인적사고",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON211",
+        "name": "3",
+        "credits": 2,
+        "group": "게임프로그래밍입문",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON212",
+        "name": "3",
+        "credits": 2,
+        "group": "게인엔진기초",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON221",
+        "name": "3",
+        "credits": 2,
+        "group": "마이크로서비스프로그래밍",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON254",
+        "name": "3",
+        "credits": 3,
+        "group": "회로와신호",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON302",
+        "name": "2",
+        "credits": 2,
+        "group": "최신기술콜로키움2",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON311",
+        "name": "3",
+        "credits": 2,
+        "group": "게임그래픽프로그래밍",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON312",
+        "name": "3",
+        "credits": 2,
+        "group": "게임인터랙티브테크놀로지",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON313",
+        "name": "3",
+        "credits": 2,
+        "group": "가상/증강현실이론및실습",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON331",
+        "name": "3",
+        "credits": 3,
+        "group": "로봇프로그래밍",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON366",
+        "name": "3",
+        "credits": 3,
+        "group": "3D데이터처리",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON370",
+        "name": "3",
+        "credits": 3,
+        "group": "풀스택서비스프로그래밍",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON491",
+        "name": "3",
+        "credits": 2,
+        "group": "인공지능과게임프로그래밍",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON492",
+        "name": "3",
+        "credits": 3,
+        "group": "풀스택서비스네트워킹",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON493",
+        "name": "3",
+        "credits": 3,
+        "group": "자연언어처리",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON496",
+        "name": "3",
+        "credits": 3,
+        "group": "소프트웨어융합보안",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON495",
+        "name": "3",
+        "credits": 3,
+        "group": "강화학습",
+        "semesters": [
+          "2"
+        ]
+      }
+    ],
+    "crawled_at": "2025-11-26T14:16:33.861427"
+  },
+  "2025": {
+    "year": "2025",
+    "programs": {
+      "KHU-CSE": {
+        "name": "컴퓨터공학전공",
+        "total_credits": 130,
+        "groups": [
+          {
+            "key": "major_basic",
+            "name": "전공기초",
+            "min_credits": 12
+          },
+          {
+            "key": "major_core",
+            "name": "전공필수",
+            "min_credits": 48
+          },
+          {
+            "key": "major_elective",
+            "name": "전공선택",
+            "min_credits": 24
+          },
+          {
+            "key": "liberal_core",
+            "name": "핵심교양",
+            "min_credits": 15
+          }
+        ],
+        "policies": {
+          "english_major_courses_required": 3
+        }
+      }
+    },
+    "catalog": [
+      {
+        "code": "AMTH1001",
+        "name": "미분방정식",
+        "credits": 3,
+        "group": "전공 기초",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "AMTH1004",
+        "name": "선형대수",
+        "credits": 3,
+        "group": "전공 기초",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "AMTH1009",
+        "name": "미분적분학",
+        "credits": 3,
+        "group": "전공 기초",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "EE211",
+        "name": "확률및랜덤변수",
+        "credits": 3,
+        "group": "전공 기초",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE103",
+        "name": "객체지향프로그래밍",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE203",
+        "name": "컴퓨터구조",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE204",
+        "name": "자료구조",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE301",
+        "name": "운영체제",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE302",
+        "name": "컴퓨터네트워크",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE304",
+        "name": "알고리즘",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE305",
+        "name": "데이터베이스",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE327",
+        "name": "소프트웨어공학",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE403",
+        "name": "졸업논문(컴퓨터공학)",
+        "credits": 0,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE405",
+        "name": "졸업프로젝트",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE406",
+        "name": "캡스톤디자인",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "EE209",
+        "name": "논리회로",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON104",
+        "name": "웹/파이선프로그래밍",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON201",
+        "name": "오픈소스SW개발방법및도구",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON253",
+        "name": "기계학습",
+        "credits": 3,
+        "group": "전공 필수",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "AI1002",
+        "name": "인공지능프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "AI3001",
+        "name": "고급딥러닝",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "AI3004",
+        "name": "빅데이터마이닝",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE104",
+        "name": "실감미디어컴퓨팅기초",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE201",
+        "name": "이산구조",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE224",
+        "name": "UI/UX프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE322",
+        "name": "컴파일러",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE324",
+        "name": "메타버스시스템",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE328",
+        "name": "프로그래밍언어론",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE330",
+        "name": "SW스타트업비즈니스",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE331",
+        "name": "딥러닝",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE332",
+        "name": "리눅스시스템프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE334",
+        "name": "SW스타트업프로젝트",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE335",
+        "name": "클라우드컴퓨팅",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE340",
+        "name": "실전기계학습",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "CSE4100",
+        "name": "블록체인프로젝트",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE423",
+        "name": "정보보호",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE426",
+        "name": "영상처리",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE428",
+        "name": "컴퓨터그래픽스",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE430",
+        "name": "메타버스테이터처리",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE431",
+        "name": "인간-컴퓨터상호작용",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE434",
+        "name": "빅데이터프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE436",
+        "name": "빅데이터프로젝트",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE437",
+        "name": "클라우드프로젝트",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE438",
+        "name": "최신기술콜로키움1",
+        "credits": 2,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE439",
+        "name": "AIoT디지털시스템",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE440",
+        "name": "AIoT소프트웨어",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE441",
+        "name": "컴퓨터비젼",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE442",
+        "name": "블록체인",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE443",
+        "name": "AI네트워킹",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE444",
+        "name": "AIoT네트워크",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE450",
+        "name": "모바일/웹서비스프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE451",
+        "name": "모바일/웹서비스프로젝트",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE452",
+        "name": "소프트웨어보안",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE453",
+        "name": "웹보안",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE495",
+        "name": "독립심화학습1(컴퓨터공학과)",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE496",
+        "name": "연구연수활동1",
+        "credits": 1,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "CSE497",
+        "name": "연구연수활동2",
+        "credits": 1,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "CSE499",
+        "name": "독립심화학습2(컴퓨터공학과)",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "EE210",
+        "name": "신호와시스템",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON103",
+        "name": "디자인적사고",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON211",
+        "name": "게임프로그래밍입문",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON212",
+        "name": "게인엔진기초",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON221",
+        "name": "마이크로서비스프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON254",
+        "name": "회로와신호",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON302",
+        "name": "최신기술콜로키움2",
+        "credits": 2,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON311",
+        "name": "게임그래픽프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON312",
+        "name": "게임인터랙티브테크놀로지",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON313",
+        "name": "가상/증강현실이론및실습",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON331",
+        "name": "로봇프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON366",
+        "name": "3D데이터처리",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON370",
+        "name": "풀스택서비스프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON491",
+        "name": "인공지능과게임프로그래밍",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON492",
+        "name": "풀스택서비스네트워킹",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON493",
+        "name": "자연언어처리",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      },
+      {
+        "code": "SWCON496",
+        "name": "소프트웨어융합보안",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "2"
+        ]
+      },
+      {
+        "code": "SWCON495",
+        "name": "강화학습",
+        "credits": 3,
+        "group": "전공 선택",
+        "semesters": [
+          "1"
+        ]
+      }
+    ],
+    "crawled_at": "2025-11-26T14:22:57.556133"
+  }
 }
