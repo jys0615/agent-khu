@@ -40,7 +40,7 @@ Agent KHU를 설치하는 다양한 방법을 안내합니다.
 ### 1. 저장소 클론
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/agent-khu.git
+git clone https://github.com/jys0615/agent-khu.git
 cd agent-khu
 ```
 
@@ -466,5 +466,5 @@ uvicorn app.main:app --port 8001
 ## 추가 도움
 
 - 📖 [문제 해결 가이드](TROUBLESHOOTING.md)
-- 💬 [GitHub Discussions](https://github.com/YOUR_USERNAME/agent-khu/discussions)
-- 🐛 [Issue 제보](https://github.com/YOUR_USERNAME/agent-khu/issues)
+- 💬 [GitHub Discussions](https://github.com/jys0615/agent-khu/discussions)
+- 🐛 [Issue 제보](https://github.com/jys0615/agent-khu/issues)

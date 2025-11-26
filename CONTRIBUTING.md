@@ -25,10 +25,10 @@ Agent KHU에 관심 가져주셔서 감사합니다! 이 문서는 프로젝트�
 ## 기여 방법
 
 ### 🐛 버그 리포트
-버그를 발견하셨나요? [이슈를 생성](https://github.com/YOUR_USERNAME/agent-khu/issues/new?template=bug_report.md)해주세요.
+버그를 발견하셨나요? [이슈를 생성](https://github.com/jys0615/agent-khu/issues/new?template=bug_report.md)해주세요.
 
 ### ✨ 기능 제안
-새로운 기능 아이디어가 있나요? [기능 제안 이슈](https://github.com/YOUR_USERNAME/agent-khu/issues/new?template=feature_request.md)를 생성해주세요.
+새로운 기능 아이디어가 있나요? [기능 제안 이슈](https://github.com/jys0615/agent-khu/issues/new?template=feature_request.md)를 생성해주세요.
 
 ### 📖 문서 개선
 오타나 설명이 부족한 부분을 발견하셨나요? 문서 개선도 큰 기여입니다!
@@ -47,7 +47,7 @@ Agent KHU에 관심 가져주셔서 감사합니다! 이 문서는 프로젝트�
 
 ```bash
 # Fork 후
-git clone https://github.com/YOUR_USERNAME/agent-khu.git
+git clone https://github.com/jys0615/agent-khu.git
 cd agent-khu
 
 # Upstream 추가
