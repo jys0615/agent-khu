@@ -1,4 +1,4 @@
-# Contributing to Agent KHU 🤝
+# Contributing to Agent KHU
 
 Agent KHU에 관심 가져주셔서 감사합니다! 이 문서는 프로젝트에 기여하는 방법을 안내합니다.
 
@@ -586,16 +586,16 @@ tools = [
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | python server.py
 ```
 
-자세한 내용은 [MCP 서버 개발 가이드](../docs/MCP_SERVERS.md) 참고
+자세한 내용은 [MCP 서버 개발 가이드](https://github.com/jys0615/agent-khu/blob/main/docs/MCP_SERVERS.md) 참고
 
 ---
 
 ## 질문하기
 
 질문이 있으시면:
-- 📖 [문서](../docs/)를 먼저 확인해주세요
-- 💬 [Discussions](https://github.com/YOUR_USERNAME/agent-khu/discussions)에서 질문
-- 🐛 버그라면 [Issue](https://github.com/YOUR_USERNAME/agent-khu/issues) 생성
+- 📖 [문서](https://github.com/jys0615/agent-khu/tree/main/docs)를 먼저 확인해주세요
+- 💬 [Discussions](https://github.com/jys0615/agent-khu/discussions)에서 질문
+- 🐛 버그라면 [Issue](https://github.com/jys0615/agent-khu/issues) 생성
 
 ---
 
