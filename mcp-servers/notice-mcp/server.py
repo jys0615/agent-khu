@@ -1,200 +1,215 @@
 """
-Notice MCP Server
-공지사항 크롤링 및 제공
+Notice MCP Server - JSON-RPC stdio 방식
 """
-import sys
+import asyncio
 import json
-import subprocess
+import sys
 import os
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from pathlib import Path
+from typing import Any, Dict
 
 # DB 연결
 sys.path.append(os.path.expanduser("~/Desktop/agent-khu/backend"))
 from app.database import SessionLocal
 from app import crud
 
-server = Server("notice-mcp")
 
-SCRAPER_PATH = os.path.expanduser(
-    "~/Desktop/agent-khu/mcp-servers/notice-mcp/scrapers/khu_scraper.py"
-)
-
-
-@server.list_tools()
-async def list_tools() -> list[Tool]:
-    """사용 가능한 도구 목록"""
-    return [
-        Tool(
-            name="get_latest_notices",
-            description="최신 공지사항 조회",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "source": {
-                        "type": "string",
-                        "enum": ["swedu", "department"],
-                        "description": "공지 출처"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": 5,
-                        "description": "결과 개수"
-                    }
-                },
-                "required": ["source"]
-            }
-        ),
-        Tool(
-            name="search_notices",
-            description="공지사항 키워드 검색",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "검색 키워드"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": 5
-                    }
-                },
-                "required": ["query"]
-            }
-        ),
-        Tool(
-            name="crawl_fresh_notices",
-            description="실시간 공지사항 크롤링 (Playwright)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "source": {
-                        "type": "string",
-                        "enum": ["swedu", "department"],
-                        "default": "swedu"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": 20
-                    }
-                }
-            }
-        )
-    ]
-
-
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """도구 실행"""
-    db = SessionLocal()
-    
+def _readline():
+    line = sys.stdin.readline()
+    if not line:
+        return None
     try:
-        if name == "get_latest_notices":
-            source = arguments.get("source", "swedu")
-            limit = arguments.get("limit", 5)
-            
-            notices = crud.get_latest_notices(db, source, limit)
-            
-            results = [
+        return json.loads(line.strip())
+    except Exception:
+        return None
+
+
+def _send(obj: dict):
+    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+
+
+def _result(id_: int, data: Any, is_error: bool = False):
+    content = [{"type": "text", "text": json.dumps(data, ensure_ascii=False, indent=2)}]
+    res = {
+        "jsonrpc": "2.0",
+        "id": id_,
+        "result": {"content": content, "isError": is_error}
+    }
+    _send(res)
+
+
+# Tools
+async def tool_get_latest_notices(args: Dict) -> Dict:
+    """최신 공지사항 조회"""
+    db = SessionLocal()
+    try:
+        source = args.get("source", "swedu")
+        limit = args.get("limit", 5)
+        
+        notices = crud.get_latest_notices(db, source, limit)
+        
+        results = {
+            "notices": [
                 {
                     "title": n.title,
                     "url": n.url,
                     "date": n.date,
                     "author": n.author,
                     "source": n.source,
-                    "views": n.views if hasattr(n, 'views') else 0  # 추가!
+                    "views": n.views if hasattr(n, 'views') else 0
                 }
                 for n in notices
             ]
-            
-            return [TextContent(
-                type="text",
-                text=json.dumps(results, ensure_ascii=False)
-            )]
+        }
         
-        elif name == "search_notices":
-            query = arguments.get("query", "")
-            limit = arguments.get("limit", 5)
-            
-            notices = crud.search_notices(db, query, limit)
-            
-            results = [
-                {
-                    "title": n.title,
-                    "url": n.url,
-                    "date": n.date,
-                    "author": n.author,
-                    "source": n.source,
-                    "views": n.views if hasattr(n, 'views') else 0  # 추가!
-                }
-                for n in notices
-            ]
-            
-            return [TextContent(
-                type="text",
-                text=json.dumps(results, ensure_ascii=False)
-            )]
-        
-        elif name == "crawl_fresh_notices":
-            # ... (동일)
-            source = arguments.get("source", "swedu")
-            limit = arguments.get("limit", 20)
-            
-            # Playwright 크롤러 실행
-            if os.path.exists(SCRAPER_PATH):
-                result = subprocess.run(
-                    ["python3", SCRAPER_PATH, source, str(limit)],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                
-                if result.returncode == 0:
-                    posts = json.loads(result.stdout)
-                    
-                    # DB 저장
-                    new_count = 0
-                    for post in posts:
-                        if crud.create_notice_from_mcp(db, post):
-                            new_count += 1
-                    
-                    return [TextContent(
-                        type="text",
-                        text=f"크롤링 완료: {new_count}개 신규 공지 저장"
-                    )]
-                else:
-                    return [TextContent(
-                        type="text",
-                        text=f"크롤링 실패: {result.stderr}"
-                    )]
-            else:
-                return [TextContent(
-                    type="text",
-                    text=f"크롤러 파일 없음: {SCRAPER_PATH}"
-                )]
-        
-        else:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"error": "Unknown tool"}, ensure_ascii=False)
-            )]
-    
+        return results
     finally:
         db.close()
 
 
+async def tool_search_notices(args: Dict) -> Dict:
+    """공지사항 검색"""
+    db = SessionLocal()
+    try:
+        query = args.get("query", "")
+        limit = args.get("limit", 5)
+        
+        notices = crud.search_notices(db, query, limit)
+        
+        results = {
+            "notices": [
+                {
+                    "title": n.title,
+                    "url": n.url,
+                    "date": n.date,
+                    "author": n.author,
+                    "source": n.source,
+                    "views": n.views if hasattr(n, 'views') else 0
+                }
+                for n in notices
+            ]
+        }
+        
+        return results
+    finally:
+        db.close()
+
+
+async def tool_crawl_fresh_notices(args: Dict) -> Dict:
+    """실시간 크롤링"""
+    # TODO: Playwright 크롤러 실행
+    return {
+        "message": "크롤링 기능은 개발 중입니다",
+        "notices": []
+    }
+
+
+# MCP 메인 루프
 async def main():
-    """MCP Server 시작"""
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options()
-        )
+    tools = {
+        "get_latest_notices": tool_get_latest_notices,
+        "search_notices": tool_search_notices,
+        "crawl_fresh_notices": tool_crawl_fresh_notices,
+    }
+    
+    while True:
+        msg = _readline()
+        if msg is None:
+            break
+        
+        # initialize
+        if msg.get("method") == "initialize":
+            _send({
+                "jsonrpc": "2.0",
+                "id": msg.get("id"),
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": {}}
+                }
+            })
+            continue
+        
+        # notifications/initialized
+        if msg.get("method") == "notifications/initialized":
+            continue
+        
+        # tools/list
+        if msg.get("method") == "tools/list":
+            _send({
+                "jsonrpc": "2.0",
+                "id": msg.get("id"),
+                "result": {
+                    "tools": [
+                        {
+                            "name": "get_latest_notices",
+                            "description": "최신 공지사항 조회",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "source": {
+                                        "type": "string",
+                                        "enum": ["swedu", "department"],
+                                        "description": "공지 출처"
+                                    },
+                                    "limit": {
+                                        "type": "integer",
+                                        "default": 5
+                                    }
+                                },
+                                "required": ["source"]
+                            }
+                        },
+                        {
+                            "name": "search_notices",
+                            "description": "공지사항 키워드 검색",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "query": {"type": "string", "description": "검색 키워드"},
+                                    "limit": {"type": "integer", "default": 5}
+                                },
+                                "required": ["query"]
+                            }
+                        },
+                        {
+                            "name": "crawl_fresh_notices",
+                            "description": "실시간 크롤링",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "source": {"type": "string", "enum": ["swedu", "department"]},
+                                    "limit": {"type": "integer", "default": 20}
+                                }
+                            }
+                        }
+                    ]
+                }
+            })
+            continue
+        
+        # tools/call
+        if msg.get("method") == "tools/call":
+            req_id = msg.get("id")
+            params = msg.get("params", {})
+            name = params.get("name")
+            arguments = params.get("arguments", {})
+            
+            if name not in tools:
+                _result(req_id, {"error": f"Unknown tool: {name}"}, is_error=True)
+                continue
+            
+            try:
+                result = await tools[name](arguments)
+                _result(req_id, result)
+            except Exception as e:
+                _result(req_id, {"error": str(e)}, is_error=True)
+            continue
+        
+        # 기타
+        if "id" in msg:
+            _result(msg["id"], {"status": "noop"})
 
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())

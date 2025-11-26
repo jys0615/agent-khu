@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from ..agent import chat_with_claude_async  # 변경!
+from ..agent import chat_with_claude_async
 from .. import schemas, crud, agent
 from ..database import get_db
-
+from typing import Optional
+from ..auth import get_current_user_optional
+from .. import models
 router = APIRouter(
     prefix="/api",
     tags=["chat"]
@@ -12,14 +14,21 @@ router = APIRouter(
 
 
 @router.post("/chat", response_model=schemas.ChatResponse)
-async def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):  # async 추가!
-    """채팅 엔드포인트"""
+async def chat(
+    request: schemas.ChatRequest, 
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_current_user_optional)  # 🆕 추가
+):
+    """채팅 엔드포인트 - 사용자 인증 선택적 지원"""
     try:
-        result = await chat_with_claude_async(  # await 추가!
+        result = await chat_with_claude_async(
             request.message,
             db,
             request.latitude,
-            request.longitude
+            request.longitude,
+            request.library_username,
+            request.library_password,
+            current_user  # 🆕 사용자 정보 전달
         )
         
         # 기본 응답
@@ -34,7 +43,26 @@ async def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):  # 
             "seats": result.get("seats"),
             "shuttle": result.get("next_bus"),
             "shuttles": result.get("shuttles"),
-            "courses": result.get("courses")
+            "courses": result.get("courses"),
+            
+            # 🆕 도서관 필드 추가
+            "library_info": result.get("library_info"),
+            "show_library_info": result.get("show_library_info", False),
+            "library_seats": result.get("library_seats"),
+            "show_library_seats": result.get("show_library_seats", False),
+            "reservation": result.get("reservation"),
+            "show_reservation": result.get("show_reservation", False),
+            "needs_library_login": result.get("needs_library_login", False),
+                        # 🆕 도서관 예약 링크 추가
+            "library_reservation_url": result.get("library_reservation_url"),
+            "show_reservation_button": result.get("show_reservation_button", False),
+            
+            # 🆕 교과과정 필드
+            "requirements": result.get("requirements"),
+            "show_requirements": result.get("show_requirements", False),
+            "evaluation": result.get("evaluation"),
+            "show_evaluation": result.get("show_evaluation", False),
+            "curriculum_courses": result.get("curriculum_courses")
         }
         
         return response_data

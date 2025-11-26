@@ -1,3 +1,4 @@
+from .mcp_client import mcp_client
 """
 MCP 서버 관리자 - sitemcp 통합
 """
@@ -88,6 +89,14 @@ class MCPServerManager:
             raise Exception(f"MCP error: {response['error']}")
         
         return response.get("result", {}).get("content", [])
+
+    async def call_curriculum(self, tool: str, **kwargs):
+        """Python curriculum-mcp 서버 호출"""
+        result = await mcp_client.call_tool("curriculum", tool, kwargs)
+        try:
+            return json.loads(result)
+        except Exception:
+            return result
     
     async def stop_all(self):
         """모든 MCP 서버 종료"""

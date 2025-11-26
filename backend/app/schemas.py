@@ -1,10 +1,12 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    library_username: Optional[str] = None  # 🆕 도서관 학번
+    library_password: Optional[str] = None  # 🆕 도서관 비밀번호
 
 class ClassroomInfo(BaseModel):
     code: str
@@ -13,10 +15,10 @@ class ClassroomInfo(BaseModel):
     floor: str
     room_name: str
     room_type: str
-    professor_name: Optional[str]
-    is_accessible: bool
-    latitude: float
-    longitude: float
+    professor_name: Optional[str] = None
+    is_accessible: bool = True
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class NoticeInfo(BaseModel):
     title: str
@@ -49,7 +51,6 @@ class ShuttleInfo(BaseModel):
     weekend_times: Optional[List[str]]
 
 class CourseInfo(BaseModel):
-    """수강신청 과목 정보 (course-mcp)"""
     code: str
     name: str
     professor: str
@@ -57,15 +58,6 @@ class CourseInfo(BaseModel):
     time: str
     classroom: str
     classification: str
-
-class CurriculumCourse(BaseModel):
-    """교과과정 과목 정보 (curriculum-mcp)"""
-    year: str
-    code: str
-    name: str
-    credits: int
-    semester: str
-    prerequisites: List[str] = []
 
 class ChatResponse(BaseModel):
     message: str
@@ -78,6 +70,132 @@ class ChatResponse(BaseModel):
     seats: Optional[List[SeatInfo]] = None
     shuttle: Optional[ShuttleInfo] = None
     shuttles: Optional[List[ShuttleInfo]] = None
-    courses: Optional[List[CourseInfo]] = None  # 수강신청 과목 (course-mcp)
-    curriculum_courses: Optional[List[CurriculumCourse]] = None  # 교과과정 과목 (curriculum-mcp)
-    show_courses: bool = False  # 추가
+    courses: Optional[List[CourseInfo]] = None
+    
+    # 🆕 도서관 관련 필드
+    library_info: Optional[Dict[str, Any]] = None
+    show_library_info: bool = False
+    library_seats: Optional[Dict[str, Any]] = None
+    show_library_seats: bool = False
+    reservation: Optional[Dict[str, Any]] = None
+    show_reservation: bool = False
+    needs_library_login: bool = False
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+        # 🆕 도서관 예약 링크 추가
+    library_reservation_url: Optional[str] = None
+    show_reservation_button: bool = False
+    
+    # 🆕 교과과정 관련 필드 (기존)
+    requirements: Optional[Dict[str, Any]] = None
+    show_requirements: bool = False
+    evaluation: Optional[Dict[str, Any]] = None
+    show_evaluation: bool = False
+    curriculum_courses: Optional[List[Dict[str, Any]]] = None
+
+from pydantic import BaseModel, validator
+from typing import Optional, List
+import json
+
+# 회원가입 요청
+class UserRegister(BaseModel):
+    student_id: str  # 학번
+    password: str
+    department: str  # 학과
+    campus: str  # 캠퍼스
+    
+    @validator('student_id')
+    def validate_student_id(cls, v):
+        if not v.isdigit() or len(v) != 10:
+            raise ValueError('학번은 10자리 숫자여야 합니다')
+        return v
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('비밀번호는 최소 8자 이상이어야 합니다')
+        return v
+    
+    @validator('campus')
+    def validate_campus(cls, v):
+        if v not in ['국제캠퍼스', '서울캠퍼스']:
+            raise ValueError('올바른 캠퍼스를 선택하세요')
+        return v
+
+
+# 로그인 요청
+class UserLogin(BaseModel):
+    student_id: str
+    password: str
+
+
+# 프로필 설정 (선택사항)
+class ProfileSetup(BaseModel):
+    current_grade: Optional[int] = None
+    interests: Optional[List[str]] = None
+    completed_credits: Optional[int] = None
+    double_major: Optional[str] = None
+    minor: Optional[str] = None
+
+
+# 프로필 수정
+class ProfileUpdate(BaseModel):
+    current_grade: Optional[int] = None
+    interests: Optional[List[str]] = None
+    completed_credits: Optional[int] = None
+    double_major: Optional[str] = None
+    minor: Optional[str] = None
+    preferences: Optional[dict] = None
+
+
+# 사용자 응답 (민감정보 제외)
+class UserResponse(BaseModel):
+    id: int
+    student_id: str
+    department: str
+    campus: str
+    admission_year: int
+    current_grade: Optional[int]
+    interests: Optional[List[str]]
+    completed_credits: Optional[int]
+    
+    class Config:
+        orm_mode = True
+    
+    @classmethod
+    def from_orm(cls, obj):
+        # JSON 필드 파싱
+        interests = None
+        if obj.interests:
+            try:
+                interests = json.loads(obj.interests)
+            except:
+                pass
+        
+        return cls(
+            id=obj.id,
+            student_id=obj.student_id,
+            department=obj.department,
+            campus=obj.campus,
+            admission_year=obj.admission_year,
+            current_grade=obj.current_grade,
+            interests=interests,
+            completed_credits=obj.completed_credits
+        )
+
+
+# 토큰 응답
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+# ChatRequest 수정 (기존 것 수정)
+class ChatRequest(BaseModel):
+    message: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    library_username: Optional[str] = None
+    library_password: Optional[str] = None
+    # 토큰은 헤더로 받을 예정 (Authorization: Bearer <token>)
