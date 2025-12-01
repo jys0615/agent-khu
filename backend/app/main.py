@@ -14,8 +14,9 @@ from contextlib import asynccontextmanager
 
 from .database import engine
 from . import models
-from .routers import classrooms, notices, chat, auth, profiles
+from .routers import classrooms, notices, chat, auth, profiles, cache
 from .mcp_client import mcp_client
+from .cache import cache_manager
 
 
 @asynccontextmanager
@@ -27,8 +28,14 @@ async def lifespan(app: FastAPI):
         print("✅ DB 테이블 확인/생성 완료")
     except Exception as e:
         print(f"❌ DB 초기화 실패: {e}")
+    
+    # 2) Redis 연결
+    try:
+        await cache_manager.connect()
+    except Exception as e:
+        print(f"⚠️ Redis 연결 중 오류 (캐시 없이 실행): {e}")
 
-    # 2) MCP 서버 자동 시작 (옵션)
+    # 3) MCP 서버 자동 시작 (옵션)
     autostart = os.getenv("MCP_AUTOSTART", "true").lower() == "true"
     if autostart:
         print("🚀 MCP Server들 시작 중...")
@@ -43,7 +50,13 @@ async def lifespan(app: FastAPI):
     # 애플리케이션 실행 구간
     yield
 
-    # 3) MCP 서버 종료
+    # 4) Redis 연결 종료
+    try:
+        await cache_manager.disconnect()
+    except Exception as e:
+        print(f"⚠️ Redis 종료 중 오류: {e}")
+
+    # 5) MCP 서버 종료
     try:
         if autostart and mcp_client.servers:
             print("🛑 MCP Server들 종료 중...")
@@ -77,6 +90,7 @@ app.include_router(profiles.router)
 app.include_router(classrooms.router)
 app.include_router(notices.router)
 app.include_router(chat.router)
+app.include_router(cache.router)     # 🆕 캐시 관리
 
 
 @app.get("/")
@@ -92,10 +106,12 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    cache_info = await cache_manager.get_info()
     return {
         "status": "healthy",
         "mcp_servers_running": len(mcp_client.servers),
         "servers": list(mcp_client.servers.keys()),
+        "cache": cache_info,
     }
 
 

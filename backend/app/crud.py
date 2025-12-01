@@ -282,12 +282,16 @@ pwd_context = CryptContext(
 )
 
 def hash_password(password: str) -> str:
-    """비밀번호 해싱"""
-    return pwd_context.hash(password)
+    """비밀번호 해싱 (bcrypt 72바이트 제한 처리)"""
+    # bcrypt는 72바이트까지만 지원하므로 잘라줌
+    password_bytes = password.encode('utf-8')[:72]
+    return pwd_context.hash(password_bytes.decode('utf-8'))
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """비밀번호 검증"""
-    return pwd_context.verify(plain_password, hashed_password)
+    """비밀번호 검증 (bcrypt 72바이트 제한 처리)"""
+    # 검증 시에도 동일하게 처리
+    password_bytes = plain_password.encode('utf-8')[:72]
+    return pwd_context.verify(password_bytes.decode('utf-8'), hashed_password)
 
 
 # User CRUD
