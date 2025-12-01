@@ -1,17 +1,32 @@
 """
-Claude + MCP 기반 자율 AI Agent
+Claude + MCP 기반 자율 AI Agent (캐싱 최적화)
 """
 import os
 import json
+import hashlib
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 from anthropic import Anthropic
-from typing import Optional
 from . import models
 from . import schemas
 from .mcp_client import mcp_client
+from .cache import cache_manager
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+# 캐시 TTL 설정 (초 단위)
+CACHE_TTL = {
+    "search_classroom": int(os.getenv("CACHE_TTL_CLASSROOM", "86400")),  # 24시간
+    "search_notices": int(os.getenv("CACHE_TTL_NOTICE", "3600")),        # 1시간
+    "get_latest_notices": int(os.getenv("CACHE_TTL_NOTICE", "3600")),    # 1시간
+    "search_curriculum": int(os.getenv("CACHE_TTL_CURRICULUM", "86400")), # 24시간
+    "get_curriculum_by_semester": int(os.getenv("CACHE_TTL_CURRICULUM", "86400")),
+    "list_programs": int(os.getenv("CACHE_TTL_CURRICULUM", "86400")),
+    "get_requirements": int(os.getenv("CACHE_TTL_CURRICULUM", "86400")),
+    "get_library_info": int(os.getenv("CACHE_TTL_LIBRARY", "300")),      # 5분
+    "get_next_shuttle": 180,  # 3분 (셔틀 시간표)
+    "get_cafeteria_info": 86400,  # 24시간
+}
 
 # Tools 정의
 tools = [
@@ -303,10 +318,52 @@ async def process_tool_call_async(
     library_password: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Tool 호출 실행 (MCP 서버 연동)
+    Tool 호출 실행 (MCP 서버 연동) - 캐싱 최적화
     """
     if tool_input is None:
         tool_input = {}
+    
+    # 캐시 가능한 tool인지 확인
+    if tool_name in CACHE_TTL:
+        # 캐시 키 생성 (tool_name + input의 정렬된 JSON)
+        cache_key_base = f"tool:{tool_name}"
+        input_str = json.dumps(tool_input, sort_keys=True, ensure_ascii=False)
+        input_hash = hashlib.md5(input_str.encode()).hexdigest()[:16]
+        cache_key = f"{cache_key_base}:{input_hash}"
+        
+        # 캐시 조회
+        cached_result = await cache_manager.get(cache_key)
+        if cached_result:
+            print(f"✅ 캐시 히트: {tool_name}")
+            return cached_result
+    
+    # 캐시 없음 - 실제 tool 실행
+    result = await _execute_tool_internal(
+        tool_name, tool_input, user_latitude, user_longitude,
+        library_username, current_user, library_password
+    )
+    
+    # 캐시 저장
+    if tool_name in CACHE_TTL and result and not result.get("error"):
+        ttl = CACHE_TTL[tool_name]
+        await cache_manager.set(cache_key, result, ttl=ttl)
+        print(f"✅ 캐시 저장: {tool_name} (TTL: {ttl}초)")
+    
+    return result
+
+
+async def _execute_tool_internal(
+    tool_name: str,
+    tool_input: dict,
+    user_latitude: Optional[float] = None,
+    user_longitude: Optional[float] = None,
+    library_username: Optional[str] = None,
+    current_user: Optional[models.User] = None,
+    library_password: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Tool 실제 실행 로직 (내부 함수)
+    """
     try:
         if tool_name == "search_classroom":
             query = tool_input.get("query", "")
