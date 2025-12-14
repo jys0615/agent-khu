@@ -63,3 +63,5 @@ docker-compose*.log
 *.pid
 *.seed
 *.pid.lock
+logs/
+external/khu-today-server/

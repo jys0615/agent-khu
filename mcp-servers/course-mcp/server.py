@@ -18,7 +18,8 @@ from mcp.types import Tool, TextContent
 from playwright.async_api import async_playwright
 
 # DB 연결
-sys.path.append(os.path.expanduser("~/Desktop/agent-khu/backend"))
+backend_path = os.getenv("BACKEND_PATH", "/app")
+sys.path.insert(0, backend_path)
 from app.database import SessionLocal
 from app import models
 

@@ -30,13 +30,33 @@ services:
       timeout: 3s
       retries: 5
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: agent-khu-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     container_name: agent-khu-backend
     environment:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/agent_khu
       REDIS_URL: redis://redis:6379
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      # Inject at runtime via .env or CI secrets; compose will fail fast if missing
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set-in-env}
       ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
     ports:
       - "8000:8000"
@@ -44,6 +64,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     volumes:
       - ./backend:/app
@@ -66,3 +88,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  elasticsearch_data:

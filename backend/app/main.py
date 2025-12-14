@@ -1,9 +1,5 @@
 """
-FastAPI 메인 애플리케이션 - MCP 기반 (개선판)
-- DB 테이블 생성: 앱 시작 시 1회 수행
-- MCP 서버 자동 시작/종료: 환경변수 MCP_AUTOSTART 로 제어(기본 true)
-- CORS: 환경변수 CORS_ALLOW_ORIGINS 로 제어(쉼표 구분)
-- /health, /ready 엔드포인트 제공
+FastAPI 메인 애플리케이션 - MCP 기반 (Lazy Start)
 """
 from __future__ import annotations
 
@@ -17,12 +13,13 @@ from . import models
 from .routers import classrooms, notices, chat, auth, profiles, cache
 from .mcp_client import mcp_client
 from .cache import cache_manager
+from .observability import obs_logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """앱 생명주기 관리 - DB 준비 및 MCP Server 자동 시작/종료"""
-    # 1) DB 테이블 생성 (애플리케이션 시작 시 1회)
+    """앱 생명주기 관리"""
+    # 1) DB 테이블 생성
     try:
         models.Base.metadata.create_all(bind=engine)
         print("✅ DB 테이블 확인/생성 완료")
@@ -33,47 +30,39 @@ async def lifespan(app: FastAPI):
     try:
         await cache_manager.connect()
     except Exception as e:
-        print(f"⚠️ Redis 연결 중 오류 (캐시 없이 실행): {e}")
+        print(f"⚠️ Redis 연결 중 오류: {e}")
+    
+    # 3) Elasticsearch 연결
+    try:
+        await obs_logger.initialize()
+    except Exception as e:
+        print(f"⚠️ Elasticsearch 연결 중 오류: {e}")
 
-    # 3) MCP 서버 자동 시작 (옵션)
-    autostart = os.getenv("MCP_AUTOSTART", "true").lower() == "true"
-    if autostart:
-        print("🚀 MCP Server들 시작 중...")
-        try:
-            await mcp_client.start_all_servers()
-        except Exception as e:
-            # lazy start가 있으므로, 실패해도 앱은 계속 구동
-            print(f"❌ MCP Server 시작 중 일부 실패: {e}")
-    else:
-        print("ℹ️ MCP_AUTOSTART=false: 서버는 필요 시 지연 기동됩니다.")
+    # 4) MCP 서버는 lazy start
+    print("ℹ️ MCP 서버는 첫 tool 호출 시 자동으로 시작됩니다.")
 
-    # 애플리케이션 실행 구간
     yield
 
-    # 4) Redis 연결 종료
+    # 종료
+    try:
+        await obs_logger.close()
+    except Exception as e:
+        print(f"⚠️ Elasticsearch 종료 중 오류: {e}")
+
     try:
         await cache_manager.disconnect()
     except Exception as e:
         print(f"⚠️ Redis 종료 중 오류: {e}")
 
-    # 5) MCP 서버 종료
-    try:
-        if autostart and mcp_client.servers:
-            print("🛑 MCP Server들 종료 중...")
-            await mcp_client.stop_all_servers()
-    except Exception as e:
-        print(f"⚠️ MCP Server 종료 중 오류: {e}")
 
-
-# FastAPI 앱 구성
 app = FastAPI(
-    title="Agent KHU - MCP Edition",
+    title="Agent KHU - MCP Edition with Observability",
     description="경희대 MCP 기반 통합 정보 시스템",
-    version="2.0.0-MCP",
+    version="2.1.0-MCP+Observability",
     lifespan=lifespan,
 )
 
-# CORS 설정 (환경변수로 제어)
+# CORS
 _default_origins = "http://localhost:5173,http://localhost:3000"
 allowed_origins = [o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", _default_origins).split(",") if o.strip()]
 app.add_middleware(
@@ -84,42 +73,60 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록 (기존 유지)
-app.include_router(auth.router)      # 🆕 추가
+# 라우터
+app.include_router(auth.router)
 app.include_router(profiles.router) 
 app.include_router(classrooms.router)
 app.include_router(notices.router)
 app.include_router(chat.router)
-app.include_router(cache.router)     # 🆕 캐시 관리
+app.include_router(cache.router)
 
 
 @app.get("/")
 async def root():
     return {
         "message": "Agent KHU - MCP 기반 통합 정보 시스템",
-        "version": "2.0.0-MCP",
+        "version": "2.1.0-MCP+Observability",
         "architecture": "MCP (Model Context Protocol)",
-        "mcp_autostart": os.getenv("MCP_AUTOSTART", "true"),
-        "mcp_servers": list(mcp_client.servers.keys()),
+        "features": ["Caching", "Observability", "Question Classification"],
+        "mcp_mode": "lazy_start",
+        "mcp_servers_available": list(mcp_client.server_params.keys()),
     }
 
 
 @app.get("/health")
 async def health_check():
-    cache_info = await cache_manager.get_info()
-    return {
+    """서버 상태 확인"""
+    health_status = {
         "status": "healthy",
-        "mcp_servers_running": len(mcp_client.servers),
-        "servers": list(mcp_client.servers.keys()),
-        "cache": cache_info,
+        "version": "2.1.0-MCP+Observability",
+        "architecture": "MCP (Model Context Protocol)",
+        "features": ["Caching", "Observability", "Question Classification"],
+        "mcp_mode": "lazy_start",
+        "mcp_servers_available": list(mcp_client.server_params.keys()),
     }
+    
+    # Cache 상태
+    try:
+        cache_info = await cache_manager.get_cache_info()
+        health_status["cache"] = cache_info
+    except Exception as e:
+        health_status["cache"] = {"error": str(e)}
+    
+    # Observability 상태
+    health_status["observability"] = {
+        "elasticsearch_enabled": obs_logger.enabled,
+        "elasticsearch_url": obs_logger.es_url if obs_logger.enabled else None
+    }
+    
+    return health_status
 
 
 @app.get("/ready")
 async def ready():
-    """간단한 준비 상태 확인: 서버 프로세스 레지스트리에 접근 가능한지만 확인"""
+    """준비 상태 확인"""
     return {
         "ready": True,
-        "known_mcp": list(mcp_client.server_paths.keys()),
-        "running": list(mcp_client.servers.keys()),
+        "mcp_mode": "lazy_start",
+        "mcp_servers_available": list(mcp_client.server_params.keys()),
     }

@@ -122,7 +122,7 @@ async def main():
                 "id": msg.get("id"),
                 "result": {
                     "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}}
+                    "capabilities": {"tools": {}}, "serverInfo": {"name": "library-mcp", "version": "1.0.0"}
                 }
             })
             continue

@@ -50,21 +50,33 @@ def search_classrooms(
     query: str,
     limit: int = 10
 ) -> List[models.Classroom]:
-    """강의실/공간 검색"""
+    """강의실/공간 검색 (개선판)"""
     search_term = query.strip()
+    
+    # LIKE 패턴 (부분 일치)
     search_pattern = f"%{search_term}%"
     
-    search_codes = [search_term, search_term.upper()]
+    # 정확한 매칭 후보들
+    search_codes = [search_term, search_term.upper(), search_term.lower()]
     
+    # "전101" → ["전101", "101"]
     if search_term.startswith("전"):
-        search_codes.append(search_term[1:])
-    elif search_term and not search_term.startswith('B') and search_term[0].isdigit():
-        search_codes.append(f"전{search_term}")
+        number_only = search_term[1:]
+        search_codes.extend([number_only, number_only.upper()])
     
-    return db.query(models.Classroom).filter(
+    # "101" → ["101", "전101"]
+    elif search_term and search_term[0].isdigit():
+        with_prefix = f"전{search_term}"
+        search_codes.extend([with_prefix, with_prefix.upper()])
+    
+    # OR 조건으로 검색 (우선순위: 정확한 매칭 → LIKE 매칭)
+    results = db.query(models.Classroom).filter(
         or_(
+            # 1순위: 정확한 코드 매칭
             models.Classroom.code.in_(search_codes),
             models.Classroom.room_number.in_(search_codes),
+            
+            # 2순위: 부분 일치
             models.Classroom.code.ilike(search_pattern),
             models.Classroom.room_number.ilike(search_pattern),
             models.Classroom.room_name.ilike(search_pattern),
@@ -72,6 +84,8 @@ def search_classrooms(
             models.Classroom.keywords.ilike(search_pattern)
         )
     ).limit(limit).all()
+    
+    return results
 
 
 def get_classrooms_by_professor(db: Session, professor_name: str) -> List[models.Classroom]:
@@ -123,7 +137,7 @@ def create_notice_from_mcp(db: Session, notice_data: dict) -> Optional[models.No
     if existing:
         return None
     
-    from datetime import datetime  # 추가
+    from datetime import datetime
     
     notice = models.Notice(
         notice_id=notice_data.get("id"),
@@ -134,7 +148,7 @@ def create_notice_from_mcp(db: Session, notice_data: dict) -> Optional[models.No
         date=notice_data.get("date", ""),
         author=notice_data.get("author"),
         views=notice_data.get("views", 0),
-        crawled_at=datetime.now()  # 추가: 명시적으로 현재 시간 설정
+        crawled_at=datetime.now()
     )
     
     db.add(notice)
@@ -224,7 +238,7 @@ def get_next_shuttle(db: Session, route: str, current_time: str, is_weekend: boo
                 "note": shuttle.note
             }
     
-    return None  # 막차 지남
+    return None
 
 def search_courses(db: Session, keyword: str = None, professor: str = None, limit: int = 10):
     """강좌 검색"""
@@ -246,7 +260,6 @@ def search_courses(db: Session, keyword: str = None, professor: str = None, limi
 
 def get_courses_by_time(db: Session, day: str, time_slot: str):
     """시간대별 강좌 검색"""
-    # "월수" + "3-4교시" 조합
     search_pattern = f"%{day}%{time_slot}%"
     
     return db.query(models.Course).filter(
@@ -269,29 +282,23 @@ def bulk_create_courses(db: Session, courses_data: List[dict]):
     
     db.commit()
 
-# crud.py에 추가
 
 import json
 from passlib.context import CryptContext
 
-# 비밀번호 해싱
+# argon2 사용 (bcrypt 문제 회피)
 pwd_context = CryptContext(
-    schemes=["bcrypt"], 
-    deprecated="auto",
-    bcrypt__rounds=12
+    schemes=["argon2"],
+    deprecated="auto"
 )
 
 def hash_password(password: str) -> str:
-    """비밀번호 해싱 (bcrypt 72바이트 제한 처리)"""
-    # bcrypt는 72바이트까지만 지원하므로 잘라줌
-    password_bytes = password.encode('utf-8')[:72]
-    return pwd_context.hash(password_bytes.decode('utf-8'))
+    """비밀번호 해싱"""
+    return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """비밀번호 검증 (bcrypt 72바이트 제한 처리)"""
-    # 검증 시에도 동일하게 처리
-    password_bytes = plain_password.encode('utf-8')[:72]
-    return pwd_context.verify(password_bytes.decode('utf-8'), hashed_password)
+    """비밀번호 검증"""
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 # User CRUD
@@ -314,8 +321,8 @@ def create_user(db: Session, user_data: dict) -> models.User:
         department=user_data["department"],
         campus=user_data["campus"],
         admission_year=admission_year,
-        interests=json.dumps([]),  # 빈 배열로 초기화
-        preferences=json.dumps({})  # 빈 객체로 초기화
+        interests=json.dumps([]),
+        preferences=json.dumps({})
     )
     
     db.add(user)
@@ -332,7 +339,6 @@ def update_user_profile(db: Session, user_id: int, profile_data: dict) -> Option
     if not user:
         return None
     
-    # 업데이트 가능한 필드
     if "current_grade" in profile_data:
         user.current_grade = profile_data["current_grade"]
     
