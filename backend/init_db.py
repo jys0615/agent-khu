@@ -86,8 +86,12 @@ def init_database():
         for sample in samples:
             print(f"   {sample.code} - {sample.building_name} {sample.room_number}호")
         
-        notice_count = db.query(models.Notice).count()
-        print(f"\n📢 공지사항 {notice_count}개 존재")
+        # Notice 테이블 데이터 확인 (스키마 버전 호환성 체크)
+        try:
+            notice_count = db.query(models.Notice).count()
+            print(f"\n📢 공지사항 {notice_count}개 존재")
+        except Exception as e:
+            print(f"\n⚠️ 공지사항 조회 실패 (스키마 업데이트 중): {type(e).__name__}")
         
     except Exception as e:
         print(f"❌ 오류 발생: {e}")

@@ -1,5 +1,5 @@
 """
-Classroom MCP Server - JSON-RPC stdio 방식
+Classroom MCP Server - MCP SDK 호환
 """
 import asyncio
 import json
@@ -7,8 +7,9 @@ import sys
 import os
 from typing import Any, Dict
 
-# DB 연결
-sys.path.append(os.path.expanduser("~/Desktop/agent-khu/backend"))
+backend_path = os.getenv("BACKEND_PATH", "/app")
+sys.path.insert(0, backend_path)
+
 from app.database import SessionLocal
 from app import crud
 
@@ -38,24 +39,16 @@ def _result(id_: int, data: Any, is_error: bool = False):
     _send(res)
 
 
-# Tools
 async def tool_search_room(args: Dict) -> Dict:
-    """강의실 검색"""
     db = SessionLocal()
     try:
         query = args.get("query", "")
-        
-        # DB에서 검색
         classrooms = crud.search_classrooms(db, query, 5)
         
         if not classrooms:
-            return {
-                "found": False,
-                "message": f"'{query}'에 대한 검색 결과가 없습니다."
-            }
+            return {"found": False, "message": f"'{query}'에 대한 검색 결과가 없습니다."}
         
-        # 결과 변환
-        results = {
+        return {
             "found": True,
             "rooms": [
                 {
@@ -66,7 +59,6 @@ async def tool_search_room(args: Dict) -> Dict:
                     "room_number": c.room_number,
                     "room_type": c.room_type,
                     "professor_name": c.professor_name,
-                    "description": f"{c.room_name} ({c.room_type})",
                     "is_accessible": c.is_accessible,
                     "latitude": c.latitude,
                     "longitude": c.longitude
@@ -74,32 +66,23 @@ async def tool_search_room(args: Dict) -> Dict:
                 for c in classrooms
             ]
         }
-        
-        return results
     except Exception as e:
-        return {
-            "found": False,
-            "error": str(e),
-            "message": f"검색 중 오류 발생: {str(e)}"
-        }
+        return {"found": False, "error": str(e)}
     finally:
         db.close()
 
 
 async def tool_get_classroom_stats(args: Dict) -> Dict:
-    """강의실 통계"""
     db = SessionLocal()
     try:
-        stats = crud.get_classroom_stats(db)
-        return stats
+        return crud.get_classroom_stats(db)
     finally:
         db.close()
 
 
-# MCP 메인 루프
 async def main():
     tools = {
-        "search_room": tool_search_room,
+        "search_classroom": tool_search_room,
         "get_classroom_stats": tool_get_classroom_stats,
     }
     
@@ -108,23 +91,24 @@ async def main():
         if msg is None:
             break
         
-        # initialize
         if msg.get("method") == "initialize":
             _send({
                 "jsonrpc": "2.0",
                 "id": msg.get("id"),
                 "result": {
                     "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}}
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {
+                        "name": "classroom-mcp",
+                        "version": "1.0.0"
+                    }
                 }
             })
             continue
         
-        # notifications/initialized
         if msg.get("method") == "notifications/initialized":
             continue
         
-        # tools/list
         if msg.get("method") == "tools/list":
             _send({
                 "jsonrpc": "2.0",
@@ -132,33 +116,26 @@ async def main():
                 "result": {
                     "tools": [
                         {
-                            "name": "search_room",
-                            "description": "경희대 전자정보대학관 공간 검색 (강의실, 연구실, 편의시설)",
+                            "name": "search_classroom",
+                            "description": "경희대 전자정보대학관 공간 검색",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "query": {
-                                        "type": "string",
-                                        "description": "검색어 (예: 전101, 김교수, 휴게실)"
-                                    }
+                                    "query": {"type": "string"}
                                 },
                                 "required": ["query"]
                             }
                         },
                         {
                             "name": "get_classroom_stats",
-                            "description": "강의실 통계 정보",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {}
-                            }
+                            "description": "강의실 통계",
+                            "inputSchema": {"type": "object", "properties": {}}
                         }
                     ]
                 }
             })
             continue
         
-        # tools/call
         if msg.get("method") == "tools/call":
             req_id = msg.get("id")
             params = msg.get("params", {})
@@ -176,7 +153,6 @@ async def main():
                 _result(req_id, {"error": str(e)}, is_error=True)
             continue
         
-        # 기타
         if "id" in msg:
             _result(msg["id"], {"status": "noop"})
 

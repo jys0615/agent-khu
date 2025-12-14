@@ -10,7 +10,8 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-sys.path.append(os.path.expanduser("~/Desktop/agent-khu/backend"))
+backend_path = os.getenv("BACKEND_PATH", "/app")
+sys.path.insert(0, backend_path)
 from app.database import SessionLocal
 from app import crud
 
