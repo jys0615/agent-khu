@@ -50,7 +50,8 @@ Agent KHU Backend REST API 엔드포인트 문서입니다.
 {
   "student_id": "2019104488",
   "name": "정윤서",
-  "department": "컴퓨터공학과"
+  "department": "컴퓨터공학과",
+  "email": "example@khu.ac.kr"
 }
 ```
 
@@ -81,7 +82,12 @@ JWT 토큰을 발급받습니다.
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
+  "token_type": "bearer",
+  "user": {
+    "student_id": "2019104488",
+    "name": "정윤서",
+    "department": "컴퓨터공학과"
+  }
 }
 ```
 

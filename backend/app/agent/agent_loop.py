@@ -14,6 +14,18 @@ from .tools_definition import tools
 from .tool_executor import process_tool_call
 from .utils import detect_curriculum_intent, build_system_prompt
 
+# SLM Agent 조건부 import
+try:
+    from ..slm_agent import get_slm_agent
+    SLM_AVAILABLE = True
+except (ImportError, ModuleNotFoundError) as e:
+    print(f"⚠️ SLM Agent 사용 불가 (torch 미설치): {e}")
+    SLM_AVAILABLE = False
+    def get_slm_agent():
+        class DummySLM:
+            enabled = False
+        return DummySLM()
+
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
@@ -27,15 +39,47 @@ async def chat_with_claude_async(
     current_user: Optional[models.User] = None
 ) -> Dict[str, Any]:
     """
-    Claude 기반 자율 Agent (with Observability)
+    Hybrid Agent: Simple → SLM, Complex → LLM (with Observability)
     """
     # Observability 시작
     start_time = time.time()
     question_type = classifier.classify(message)
     mcp_tools_used = []
+    routing_decision = "llm"  # 기본값
     
     print(f"📊 Question Type: {question_type.upper()}")
     print(f"📝 Classification: {classifier.get_classification_reason(message)}")
+    
+    # 🆕 Simple 질문 → SLM 시도
+    if question_type == "simple":
+        slm = get_slm_agent()
+        if slm.enabled:
+            print("🟢 SLM으로 처리 시도...")
+            slm_result = await slm.generate(message)
+            
+            if slm_result["success"] and slm_result["confidence"] >= 0.7:
+                print(f"✅ SLM 성공 (confidence: {slm_result['confidence']:.2f})")
+                routing_decision = "slm"
+                
+                # Observability 로깅
+                await obs_logger.log_interaction(
+                    question=message,
+                    user_id=current_user.student_id if current_user else "anonymous",
+                    question_type=question_type,
+                    routing_decision=routing_decision,
+                    mcp_tools_used=[],
+                    response=slm_result["message"],
+                    latency_ms=int((time.time() - start_time) * 1000),
+                    success=True
+                )
+                
+                return {"message": slm_result["message"]}
+            else:
+                print(f"⚠️ SLM 품질 낮음 (confidence: {slm_result.get('confidence', 0):.2f}), LLM Fallback")
+                routing_decision = "llm_fallback"
+    
+    # 🔵 Complex 질문 또는 SLM 실패 → LLM 사용
+    print(f"🔵 LLM (Claude)으로 처리... (routing: {routing_decision})")
     
     try:
         # System prompt 생성
@@ -129,7 +173,7 @@ async def chat_with_claude_async(
                     question=message,
                     user_id=current_user.student_id if current_user else "anonymous",
                     question_type=question_type,
-                    routing_decision="llm",
+                    routing_decision=routing_decision,
                     mcp_tools_used=mcp_tools_used,
                     response=result["message"],
                     latency_ms=int((time.time() - start_time) * 1000),
@@ -160,7 +204,7 @@ async def chat_with_claude_async(
             question=message,
             user_id=current_user.student_id if current_user else "anonymous",
             question_type=question_type,
-            routing_decision="llm",
+            routing_decision=routing_decision,
             mcp_tools_used=mcp_tools_used,
             response=result["message"],
             latency_ms=int((time.time() - start_time) * 1000),
@@ -177,7 +221,7 @@ async def chat_with_claude_async(
             question=message,
             user_id=current_user.student_id if current_user else "anonymous",
             question_type=question_type,
-            routing_decision="llm",
+            routing_decision=routing_decision,
             mcp_tools_used=mcp_tools_used,
             response=str(e),
             latency_ms=int((time.time() - start_time) * 1000),

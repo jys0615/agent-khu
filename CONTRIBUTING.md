@@ -108,6 +108,38 @@ npm run dev
 
 ---
 
+## 개발 권장사항
+
+### Frontend 폼 개발
+로그인/회원가입 등의 폼을 개발할 때는 다음 사항을 준수해주세요:
+
+**브라우저 Credential 지원**
+- 폼에 `autoComplete` 속성 추가 (`autoComplete="on"`)
+- 입력 필드에 적절한 `name`과 `autoComplete` 값 설정
+  - 아이디: `name="username"`, `autoComplete="username"`
+  - 비밀번호 (로그인): `autoComplete="current-password"`
+  - 비밀번호 (회원가입): `autoComplete="new-password"`
+  - 이메일: `autoComplete="email"`
+
+**예시**:
+```tsx
+<form autoComplete="on">
+  <input
+    name="username"
+    autoComplete="username"
+    // ...
+  />
+  <input
+    name="password"
+    type="password"
+    autoComplete="current-password"
+    // ...
+  />
+</form>
+```
+
+---
+
 ## 코드 스타일
 
 ### Python (Backend)

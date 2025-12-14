@@ -15,6 +15,8 @@ const Profile: React.FC = () => {
         return null;
     }
 
+    const displayName = user.name || user.student_id;
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-khu-red-50">
             {/* 헤더 */}
@@ -42,13 +44,13 @@ const Profile: React.FC = () => {
                     {/* 프로필 헤더 */}
                     <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-200">
                         <div className="w-20 h-20 bg-gradient-to-br from-khu-primary to-khu-red-600 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                            {user.student_id.slice(0, 2)}
+                            {displayName.slice(0, 2)}
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                                {user.student_id}학번
+                                {displayName}
                             </h2>
-                            <p className="text-gray-600">{user.department}</p>
+                            <p className="text-gray-600">{user.student_id}학번 · {user.department}</p>
                         </div>
                     </div>
 
