@@ -13,7 +13,7 @@ from transformers import (
     Trainer,
     DataCollatorForLanguageModeling
 )
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model
 from datasets import Dataset
 import subprocess
 
@@ -123,26 +123,29 @@ def finetune():
     
     # 3. 모델 & 토크나이저 로드
     print("\n📦 모델 로딩 중...")
-    model_name = "MLP-KTLim/llama-3-Korean-Bllossom-8B"
-    
+    # Qwen 2.5 3B Instruct (HF weights; GGUF는 학습 불가)
+    model_name = "Qwen/Qwen2.5-3B-Instruct"
+
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
         trust_remote_code=True
     )
     tokenizer.pad_token = tokenizer.eos_token
-    
-    # 4-bit 양자화로 메모리 절약
+
+    # CPU 환경에서 bitsandbytes 4bit가 동작하지 않으므로 기본 로딩으로 전환
+    # (메모리 부담이 크면 더 작은 모델로 교체 필요)
+    device_map = "auto" if torch.cuda.is_available() else {"": "cpu"}
+    dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        load_in_4bit=True,
-        device_map="auto",
-        torch_dtype=torch.float16,
+        device_map=device_map,
+        torch_dtype=dtype,
         trust_remote_code=True
     )
     
     # 4. LoRA 설정
     print("🔧 LoRA 설정 중...")
-    model = prepare_model_for_kbit_training(model)
     
     lora_config = LoraConfig(
         r=16,
@@ -167,14 +170,15 @@ def finetune():
     training_args = TrainingArguments(
         output_dir=str(output_dir),
         num_train_epochs=3,
-        per_device_train_batch_size=4,
-        gradient_accumulation_steps=4,
+        per_device_train_batch_size=1 if not torch.cuda.is_available() else 4,
+        gradient_accumulation_steps=1 if not torch.cuda.is_available() else 4,
         learning_rate=2e-4,
-        fp16=True,
+        fp16=torch.cuda.is_available(),
+        bf16=False,
         logging_steps=10,
         save_steps=100,
         save_total_limit=3,
-        warmup_steps=50,
+        warmup_steps=10,
         report_to="tensorboard",
         logging_dir=str(output_dir / "logs")
     )
