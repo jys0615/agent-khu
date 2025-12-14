@@ -3,77 +3,53 @@ name: Daily Finetune
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 18 * * *"  # KST 03:00
+    - cron: "0 18 * * *"
 
 jobs:
   finetune:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
-    env:
-      HF_HOME: /home/runner/.cache/huggingface
-      PYTHONPATH: backend
-      # 필요 시 비밀 변수를 환경에 매핑하세요 (예: ES/DB/LLM 키)
-      # ELASTICSEARCH_URL: ${{ secrets.ELASTICSEARCH_URL }}
-      # DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      # HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    timeout-minutes: 480
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Configure git
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-
       - name: Install dependencies
-        run: pip install -U transformers accelerate peft datasets sentencepiece "protobuf<5" elasticsearch
+        run: pip install -U transformers accelerate peft datasets sentencepiece protobuf elasticsearch
 
       - name: Extract training data
         working-directory: backend/scripts
         continue-on-error: true
-        run: |
-          python3 extract_training_data.py || echo "⚠️ Could not connect to Elasticsearch, checking for existing training_data.jsonl"
+        run: python3 extract_training_data.py
 
-      - name: Check for training data
+      - name: Create dummy training data if needed
         working-directory: backend/scripts
         run: |
           if [ ! -f training_data.jsonl ]; then
-            echo "⚠️ No training_data.jsonl found. Creating dummy training data..."
-            python3 << 'PYTHON_EOF'
+            python3 -c "
           import json
-          training_data = [
-            {"instruction": "경희대학교 학생을 위한 캠퍼스 정보를 제공하세요.", "input": "알고리즘 몇 학점?", "output": "알고리즘은 3학점 전공필수 과목입니다.", "tools_used": ["search_curriculum"], "metadata": {}},
-            {"instruction": "경희대학교 학생을 위한 캠퍼스 정보를 제공하세요.", "input": "자료구조 언제 개설?", "output": "자료구조는 1학기, 2학기 모두 개설됩니다.", "tools_used": ["search_curriculum"], "metadata": {}},
-            {"instruction": "경희대학교 학생을 위한 캠퍼스 정보를 제공하세요.", "input": "운영체제 필수야?", "output": "운영체제는 전공선택 과목입니다.", "tools_used": ["search_curriculum"], "metadata": {}}
+          data = [
+            {'instruction': '경희대학교 정보', 'input': '알고리즘 몇 학점?', 'output': '3학점', 'tools_used': [], 'metadata': {}},
+            {'instruction': '경희대학교 정보', 'input': '자료구조 언제?', 'output': '1,2학기', 'tools_used': [], 'metadata': {}},
+            {'instruction': '경희대학교 정보', 'input': '운영체제?', 'output': '선택', 'tools_used': [], 'metadata': {}}
           ]
-          with open("training_data.jsonl", "w") as f:
-            for item in training_data:
-              f.write(json.dumps(item, ensure_ascii=False) + "\n")
-          print(f"✅ Dummy training data created ({len(training_data)} samples)")
-          PYTHON_EOF
-          else
-            wc -l training_data.jsonl
+          with open('training_data.jsonl', 'w') as f:
+            for item in data:
+              f.write(json.dumps(item, ensure_ascii=False) + '\n')
+            "
           fi
+          wc -l training_data.jsonl
 
-      - name: Finetune SLM (Qwen 2.5 3B)
+      - name: Run finetune
         working-directory: backend/scripts
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          python3 finetune_slm.py || exit 1
+        run: python3 finetune_slm.py
 
-      - name: Upload finetuned model artifact
+      - name: Upload artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: finetuned-model
-          path: |
-            models/finetuned/**
-            logs/**
+          path: models/finetuned/
