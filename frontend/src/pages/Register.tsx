@@ -39,6 +39,7 @@ const Register: React.FC = () => {
                 <div className="text-center mb-6">
                     <h1 className="text-2xl font-bold text-khu-primary">회원가입</h1>
                     <p className="text-gray-600 mt-2">Agent KHU에 오신 것을 환영합니다</p>
+                    <p className="text-sm text-gray-500 mt-1">아이디와 비밀번호는 경희대학교 인포와 동일하게 사용해주세요.</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-lg p-8">
@@ -48,18 +49,20 @@ const Register: React.FC = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 학번 *
                             </label>
                             <input
                                 type="text"
+                                name="username"
                                 value={formData.student_id}
                                 onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
                                 className="input-chat"
                                 placeholder="2021123456"
                                 required
+                                autoComplete="username"
                             />
                         </div>
 
@@ -69,11 +72,13 @@ const Register: React.FC = () => {
                             </label>
                             <input
                                 type="text"
+                                name="name"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 className="input-chat"
                                 placeholder="홍길동"
                                 required
+                                autoComplete="name"
                             />
                         </div>
 
@@ -83,11 +88,13 @@ const Register: React.FC = () => {
                             </label>
                             <input
                                 type="email"
+                                name="email"
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 className="input-chat"
                                 placeholder="example@khu.ac.kr"
                                 required
+                                autoComplete="email"
                             />
                         </div>
 
@@ -97,12 +104,14 @@ const Register: React.FC = () => {
                             </label>
                             <input
                                 type="password"
+                                name="new-password"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 className="input-chat"
                                 placeholder="8자 이상 입력"
                                 required
                                 minLength={8}
+                                autoComplete="new-password"
                             />
                         </div>
 

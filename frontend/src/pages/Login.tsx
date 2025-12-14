@@ -53,18 +53,20 @@ const Login: React.FC = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 학번
                             </label>
                             <input
                                 type="text"
+                                name="username"
                                 value={formData.student_id}
                                 onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
                                 className="input-chat"
                                 placeholder="2021123456"
                                 required
+                                autoComplete="username"
                             />
                         </div>
 
@@ -74,11 +76,13 @@ const Login: React.FC = () => {
                             </label>
                             <input
                                 type="password"
+                                name="current-password"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 className="input-chat"
                                 placeholder="비밀번호를 입력하세요"
                                 required
+                                autoComplete="current-password"
                             />
                         </div>
 

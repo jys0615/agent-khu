@@ -85,10 +85,10 @@ docker-compose exec backend python init_db.py
 
 ### 예시 1: 교과과정 조회
 ```
-학생: "2019학번 컴공 학생인데 자료구조는 몇 학기에 들을 수 있어?"
+학생 (정윤서): "2019학번 컴공 학생인데 자료구조는 몇 학기에 들을 수 있어?"
 
 Agent KHU:
-📚 자료구조 과목 정보를 안내해드리겠습니다!
+📚 정윤서님, 자료구조 과목 정보를 안내해드리겠습니다!
 
 📘 과목명: 자료구조
 📝 과목코드: CSE204
@@ -225,6 +225,7 @@ Agent KHU:
 - **[Vite](https://vitejs.dev/)** - 빌드 도구
 - **[TailwindCSS](https://tailwindcss.com/)** - 스타일링
 - **[Axios](https://axios-http.com/)** - HTTP 클라이언트
+- **브라우저 Credential Manager** - 로그인 정보 자동 저장
 
 ### MCP Servers
 - **Python**: curriculum, meal, library, shuttle, classroom, notice
