@@ -33,9 +33,7 @@ jobs:
           git config --global user.name "GitHub Actions"
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "transformers>=4.44" "accelerate>=0.32" peft datasets sentencepiece protobuf<5 elasticsearch
+        run: pip install -U transformers accelerate peft datasets sentencepiece "protobuf<5" elasticsearch
 
       - name: Extract training data
         working-directory: backend/scripts
