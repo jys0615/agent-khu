@@ -15,7 +15,6 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model
 from datasets import Dataset
-import subprocess
 
 
 # 경로 설정 (backend/scripts 기준)
@@ -37,23 +36,16 @@ LOGS_DIR.mkdir(exist_ok=True)
 
 
 def extract_training_data():
-    """Elasticsearch에서 학습 데이터 추출"""
-    print("📊 학습 데이터 추출 중...")
+    """Elasticsearch에서 학습 데이터 추출 (워크플로에서 따로 실행됨)"""
+    print("📊 학습 데이터 파일 확인 중...")
     
-    # extract_training_data.py 실행
-    result = subprocess.run(
-        ["python3", str(SCRIPT_DIR / "extract_training_data.py")],
-        capture_output=True,
-        text=True,
-        cwd=str(SCRIPT_DIR)
-    )
-    
-    if result.returncode != 0:
-        print(f"❌ 데이터 추출 실패: {result.stderr}")
+    # 워크플로에서 이미 extract_training_data.py를 실행하므로 여기서는 파일만 확인
+    if TRAINING_DATA_FILE.exists():
+        print(f"✅ training_data.jsonl 존재")
+        return True
+    else:
+        print(f"⚠️ training_data.jsonl 없음 - 워크플로에서 생성되어야 함")
         return False
-    
-    print(result.stdout)
-    return True
 
 
 def load_training_data():
