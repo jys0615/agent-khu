@@ -1,5 +1,5 @@
 {
-  "created_at": "2025-12-15T07:27:08.505480",
+  "created_at": "2025-12-15T08:34:45.609037",
   "week_start": "2025-12-15",
   "weekly_data": {
     "2025-12-15": {
@@ -33,7 +33,7 @@
         "date": "2025-12-16",
         "day": "화요일",
         "meal_type": "dinner",
-        "menu": "버섯불고기덮밥",
+        "menu": "매장폐쇄비빔밥",
         "price": 5000,
         "available": true
       }
@@ -43,7 +43,7 @@
         "date": "2025-12-17",
         "day": "수요일",
         "meal_type": "lunch",
-        "menu": "우불고기",
+        "menu": "우동&주먹밥",
         "price": 5000,
         "available": true
       },
@@ -51,7 +51,7 @@
         "date": "2025-12-17",
         "day": "수요일",
         "meal_type": "dinner",
-        "menu": "통살햄스스무비",
+        "menu": "숯불매콤비빔밥",
         "price": 5000,
         "available": true
       }
@@ -61,7 +61,7 @@
         "date": "2025-12-18",
         "day": "목요일",
         "meal_type": "lunch",
-        "menu": "후라이드한입닭",
+        "menu": "후라이드한정식",
         "price": 5000,
         "available": true
       },
@@ -79,7 +79,7 @@
         "date": "2025-12-19",
         "day": "금요일",
         "meal_type": "lunch",
-        "menu": "야채고로케",
+        "menu": "뚝배기삼겹김치",
         "price": 5000,
         "available": true
       },

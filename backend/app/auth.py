@@ -80,10 +80,19 @@ def get_current_user_optional(
     db: Session = Depends(get_db)
 ) -> Optional[models.User]:
     """선택적 인증 (토큰 없어도 됨)"""
+    print(f"🔍 DEBUG [get_current_user_optional] - token: {token[:20] if token else 'None'}...")
+    
     if not token:
+        print("⚠️ DEBUG - 토큰이 없습니다 (비로그인 상태)")
         return None
     
     try:
-        return get_current_user(token, db)
-    except HTTPException:
+        user = get_current_user(token, db)
+        print(f"✅ DEBUG - 사용자 인증 성공: {user.student_id} ({user.name})")
+        return user
+    except HTTPException as e:
+        print(f"❌ DEBUG - 토큰 검증 실패: {e.detail}")
+        return None
+    except Exception as e:
+        print(f"❌ DEBUG - 예외 발생: {str(e)}")
         return None
