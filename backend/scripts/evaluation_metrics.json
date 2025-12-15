@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "total_samples": 109,
+    "timestamp": "2025-12-15T03:07:45.557181",
+    "source": "elasticsearch"
+  },
+  "overall": {
+    "success_rate": 90.83,
+    "success_count": 99,
+    "total": 109,
+    "failed_count": 10,
+    "failed_rate": 9.17
+  },
+  "by_domain": {
+    "unknown": {
+      "total": 109,
+      "success": 99,
+      "success_rate": 90.83,
+      "avg_latency_ms": 22205.49,
+      "p50_latency_ms": 19750,
+      "p95_latency_ms": 50984
+    }
+  },
+  "latency": {
+    "min_ms": 4496,
+    "max_ms": 101427,
+    "avg_ms": 22205.49,
+    "median_ms": 19750,
+    "p50_ms": 19750,
+    "p95_ms": 50984,
+    "p99_ms": 101427,
+    "stdev_ms": 13337.15
+  },
+  "tools": {
+    "avg_tools_per_request": 1.61,
+    "max_tools": 5,
+    "zero_tool_requests": 4,
+    "zero_tool_rate": 4.04,
+    "most_used_tools": {
+      "search_curriculum": 38,
+      "search_classroom": 23,
+      "search_courses": 16,
+      "get_library_info": 13,
+      "get_latest_notices": 11
+    }
+  },
+  "routing": {
+    "distribution": {
+      "llm": 100.0
+    },
+    "counts": {
+      "llm": 109
+    }
+  }
+}

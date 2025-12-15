@@ -574,32 +574,91 @@
     ],
     "programs": {
       "KHU-CSE": {
-        "name": "컴퓨터공학전공",
-        "total_credits": 0,
-        "groups": [
-          {
-            "key": "major_basic",
-            "name": "전공기초",
-            "min_credits": 0
-          },
-          {
-            "key": "major_core",
-            "name": "전공필수",
-            "min_credits": 0
-          },
-          {
-            "key": "major_elective",
-            "name": "전공선택",
-            "min_credits": 0
-          },
-          {
-            "key": "liberal_core",
-            "name": "핵심교양",
-            "min_credits": 0
-          }
-        ],
-        "policies": {
-          "english_major_courses_required": 3
+        "year": "2019",
+        "program": "KHU-CSE",
+        "program_name": "컴퓨터공학과",
+        "single_major": {
+          "total_credits": 140,
+          "major_credits": 96,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 18,
+              "description": "컴퓨터공학 기초 과목"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 45,
+              "description": "필수 이수 전공과목"
+            },
+            {
+              "key": "major_industrial",
+              "name": "산학필수",
+              "min_credits": 12,
+              "description": "산학협력 과목"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 21,
+              "description": "선택 전공과목"
+            }
+          ]
+        },
+        "double_major": {
+          "total_credits": 51,
+          "major_credits": 51,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 9,
+              "description": "다전공 기초"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 27,
+              "description": "다전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 15,
+              "description": "다전공 선택"
+            }
+          ]
+        },
+        "minor": {
+          "total_credits": 21,
+          "major_credits": 21,
+          "groups": [
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 15,
+              "description": "부전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 6,
+              "description": "부전공 선택"
+            }
+          ]
+        },
+        "special_requirements": {
+          "english_courses_required": 3,
+          "english_courses_transfer": 1,
+          "graduation_project_required": true,
+          "sw_education_required": true,
+          "sw_education_credits": 6
+        },
+        "transfer_student_notes": {
+          "english_courses_required": 1,
+          "description": "편입생은 영어강의 1과목 이상 필수 (신입생은 3과목)"
         }
       },
       "KHU-AI": {
@@ -645,32 +704,91 @@
     "year": "2024",
     "programs": {
       "KHU-CSE": {
-        "name": "컴퓨터공학전공",
-        "total_credits": 130,
-        "groups": [
-          {
-            "key": "major_basic",
-            "name": "전공기초",
-            "min_credits": 12
-          },
-          {
-            "key": "major_core",
-            "name": "전공필수",
-            "min_credits": 48
-          },
-          {
-            "key": "major_elective",
-            "name": "전공선택",
-            "min_credits": 24
-          },
-          {
-            "key": "liberal_core",
-            "name": "핵심교양",
-            "min_credits": 15
-          }
-        ],
-        "policies": {
-          "english_major_courses_required": 3
+        "year": "2024",
+        "program": "KHU-CSE",
+        "program_name": "컴퓨터공학과",
+        "single_major": {
+          "total_credits": 130,
+          "major_credits": 87,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 15,
+              "description": "컴퓨터공학 기초 과목"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 45,
+              "description": "필수 이수 전공과목"
+            },
+            {
+              "key": "major_industrial",
+              "name": "산학필수",
+              "min_credits": 12,
+              "description": "산학협력 과목"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 15,
+              "description": "선택 전공과목"
+            }
+          ]
+        },
+        "double_major": {
+          "total_credits": 51,
+          "major_credits": 51,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 9,
+              "description": "다전공 기초"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 27,
+              "description": "다전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 15,
+              "description": "다전공 선택"
+            }
+          ]
+        },
+        "minor": {
+          "total_credits": 21,
+          "major_credits": 21,
+          "groups": [
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 15,
+              "description": "부전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 6,
+              "description": "부전공 선택"
+            }
+          ]
+        },
+        "special_requirements": {
+          "english_courses_required": 3,
+          "english_courses_transfer": 1,
+          "graduation_project_required": true,
+          "sw_education_required": true,
+          "sw_education_credits": 6
+        },
+        "transfer_student_notes": {
+          "english_courses_required": 1,
+          "description": "편입생은 영어강의 1과목 이상 필수 (신입생은 3과목)"
         }
       }
     },
@@ -1405,32 +1523,91 @@
     "year": "2025",
     "programs": {
       "KHU-CSE": {
-        "name": "컴퓨터공학전공",
-        "total_credits": 130,
-        "groups": [
-          {
-            "key": "major_basic",
-            "name": "전공기초",
-            "min_credits": 12
-          },
-          {
-            "key": "major_core",
-            "name": "전공필수",
-            "min_credits": 48
-          },
-          {
-            "key": "major_elective",
-            "name": "전공선택",
-            "min_credits": 24
-          },
-          {
-            "key": "liberal_core",
-            "name": "핵심교양",
-            "min_credits": 15
-          }
-        ],
-        "policies": {
-          "english_major_courses_required": 3
+        "year": "2025",
+        "program": "KHU-CSE",
+        "program_name": "컴퓨터공학과",
+        "single_major": {
+          "total_credits": 130,
+          "major_credits": 96,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 12,
+              "description": "컴퓨터공학 기초 과목"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 48,
+              "description": "필수 이수 전공과목"
+            },
+            {
+              "key": "major_industrial",
+              "name": "산학필수",
+              "min_credits": 12,
+              "description": "산학협력 과목"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 24,
+              "description": "선택 전공과목"
+            }
+          ]
+        },
+        "double_major": {
+          "total_credits": 51,
+          "major_credits": 51,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 9,
+              "description": "다전공 기초"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 27,
+              "description": "다전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 15,
+              "description": "다전공 선택"
+            }
+          ]
+        },
+        "minor": {
+          "total_credits": 21,
+          "major_credits": 21,
+          "groups": [
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 15,
+              "description": "부전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 6,
+              "description": "부전공 선택"
+            }
+          ]
+        },
+        "special_requirements": {
+          "english_courses_required": 3,
+          "english_courses_transfer": 1,
+          "graduation_project_required": true,
+          "sw_education_required": true,
+          "sw_education_credits": 6
+        },
+        "transfer_student_notes": {
+          "english_courses_required": 1,
+          "description": "편입생은 영어강의 1과목 이상 필수 (신입생은 3과목)"
         }
       }
     },
@@ -2145,5 +2322,193 @@
       }
     ],
     "crawled_at": "2025-11-26T14:22:57.556133"
+  },
+  "2023": {
+    "year": "2023",
+    "programs": {
+      "KHU-CSE": {
+        "year": "2023",
+        "program": "KHU-CSE",
+        "program_name": "컴퓨터공학과",
+        "single_major": {
+          "total_credits": 140,
+          "major_credits": 93,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 18,
+              "description": "컴퓨터공학 기초 과목"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 45,
+              "description": "필수 이수 전공과목"
+            },
+            {
+              "key": "major_industrial",
+              "name": "산학필수",
+              "min_credits": 12,
+              "description": "산학협력 과목"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 18,
+              "description": "선택 전공과목"
+            }
+          ]
+        },
+        "double_major": {
+          "total_credits": 51,
+          "major_credits": 51,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 9,
+              "description": "다전공 기초"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 27,
+              "description": "다전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 15,
+              "description": "다전공 선택"
+            }
+          ]
+        },
+        "minor": {
+          "total_credits": 21,
+          "major_credits": 21,
+          "groups": [
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 15,
+              "description": "부전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 6,
+              "description": "부전공 선택"
+            }
+          ]
+        },
+        "special_requirements": {
+          "english_courses_required": 3,
+          "english_courses_transfer": 1,
+          "graduation_project_required": true,
+          "sw_education_required": true,
+          "sw_education_credits": 6
+        },
+        "transfer_student_notes": {
+          "english_courses_required": 1,
+          "description": "편입생은 영어강의 1과목 이상 필수 (신입생은 3과목)"
+        }
+      }
+    },
+    "catalog": []
+  },
+  "2020": {
+    "year": "2020",
+    "programs": {
+      "KHU-CSE": {
+        "year": "2020",
+        "program": "KHU-CSE",
+        "program_name": "컴퓨터공학과",
+        "single_major": {
+          "total_credits": 140,
+          "major_credits": 96,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 18,
+              "description": "컴퓨터공학 기초 과목"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 45,
+              "description": "필수 이수 전공과목"
+            },
+            {
+              "key": "major_industrial",
+              "name": "산학필수",
+              "min_credits": 12,
+              "description": "산학협력 과목"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 21,
+              "description": "선택 전공과목"
+            }
+          ]
+        },
+        "double_major": {
+          "total_credits": 51,
+          "major_credits": 51,
+          "groups": [
+            {
+              "key": "major_basic",
+              "name": "전공기초",
+              "min_credits": 9,
+              "description": "다전공 기초"
+            },
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 27,
+              "description": "다전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 15,
+              "description": "다전공 선택"
+            }
+          ]
+        },
+        "minor": {
+          "total_credits": 21,
+          "major_credits": 21,
+          "groups": [
+            {
+              "key": "major_core",
+              "name": "전공필수",
+              "min_credits": 15,
+              "description": "부전공 필수"
+            },
+            {
+              "key": "major_elective",
+              "name": "전공선택",
+              "min_credits": 6,
+              "description": "부전공 선택"
+            }
+          ]
+        },
+        "special_requirements": {
+          "english_courses_required": 3,
+          "english_courses_transfer": 1,
+          "graduation_project_required": true,
+          "sw_education_required": true,
+          "sw_education_credits": 6
+        },
+        "transfer_student_notes": {
+          "english_courses_required": 1,
+          "description": "편입생은 영어강의 1과목 이상 필수 (신입생은 3과목)"
+        }
+      }
+    },
+    "catalog": []
   }
 }

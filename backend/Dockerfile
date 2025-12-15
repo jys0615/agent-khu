@@ -2,32 +2,49 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 시스템 의존성 설치
+# 시스템 의존성 설치 (Playwright용 포함)
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
     curl \
     wget \
     gnupg \
+    # Playwright Chromium 의존성
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libatspi2.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libx11-6 \
+    libxcb1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 의존성 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Playwright 설치 (브라우저 없이)
-# MCP 서버들이 Playwright를 사용하지만, 대부분 requests로 대체 가능
-# 실제 브라우저가 필요한 경우에만 아래 주석 해제
-# RUN playwright install --with-deps chromium
+# Playwright Chromium 설치
+RUN playwright install chromium
 
 # 애플리케이션 코드 복사
 COPY . .
 
 # MCP 서버 경로 설정
 ENV MCP_ROOT=/mcp-servers
-
-# Playwright를 사용하지 않고 requests로 크롤링하도록 설정
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # 포트 노출
 EXPOSE 8000

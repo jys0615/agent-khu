@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendMessage } from '../api/chat';
 import MessageBubble from './MessageBubble';
-import MapButton from './MapButton';
-import RequirementsCard from './RequirementsCard';
-import EvaluationCard from './EvaluationCard';
+// MapButton is rendered inside MessageBubble; no direct use here.
 
 interface Message {
     id: string;
@@ -14,6 +12,7 @@ interface Message {
     mapLink?: string;
     showMapButton?: boolean;
     notices?: any[];
+    meals?: any[];
     seats?: any[];
     requirements?: any;
     show_requirements?: boolean;
@@ -158,6 +157,7 @@ const ChatInterface: React.FC = () => {
                     mapLink: response.map_link,
                     showMapButton: response.show_map_button,
                     notices: response.notices,
+                    meals: response.meals,
                     seats: response.seats,
                     requirements: response.requirements,
                     show_requirements: response.show_requirements,
@@ -207,9 +207,13 @@ const ChatInterface: React.FC = () => {
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
-            {/* 메시지 영역 */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 scrollbar-custom">
+        <div className="flex flex-col h-full bg-transparent">
+            <div
+                className="bg-white rounded-[24px] shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col"
+                style={{ height: 'calc(100vh - 180px)' }}
+            >
+                {/* 메시지 영역 */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 scrollbar-custom">
                 {/* 환영 메시지 */}
                 {showWelcome && messages.length === 0 && (
                     <div className="animate-fade-in">
@@ -352,7 +356,7 @@ const ChatInterface: React.FC = () => {
                 )}
 
                 <div ref={messagesEndRef} />
-            </div>
+                </div>
 
             {/* 입력 영역 */}
             <div className="border-t border-gray-200 bg-white p-4">
@@ -400,6 +404,7 @@ const ChatInterface: React.FC = () => {
                 <p className="mt-2 text-xs text-gray-500 text-center">
                     Enter로 전송 · Shift+Enter로 줄바꿈
                 </p>
+            </div>
             </div>
         </div>
     );

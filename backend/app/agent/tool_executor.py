@@ -99,11 +99,15 @@ async def _handle_search_classroom(tool_input: dict, user_latitude: Optional[flo
         return {"message": f"'{query}'에 대한 검색 결과가 없습니다."}
     
     room = data["rooms"][0]
+    # 지도 링크: 좌표만 있어도 목적지 링크 제공, 사용자 위치가 있으면 경로 안내
     map_link = None
-    if user_latitude and user_longitude and room.get("latitude") and room.get("longitude"):
+    if room.get("latitude") and room.get("longitude"):
+        origin_param = ""
+        if user_latitude and user_longitude:
+            origin_param = f"&origin={user_latitude},{user_longitude}"
         map_link = (
             f"https://www.google.com/maps/dir/?api=1"
-            f"&origin={user_latitude},{user_longitude}"
+            f"{origin_param}"
             f"&destination={room['latitude']},{room['longitude']}"
         )
     
@@ -121,6 +125,8 @@ async def _handle_search_classroom(tool_input: dict, user_latitude: Optional[flo
             "longitude": room.get("longitude")
         },
         "map_link": map_link
+        ,
+        "show_map_button": map_link is not None
     }
 
 
@@ -222,8 +228,9 @@ async def _handle_crawl_fresh_notices(tool_input: dict):
     }
     if keyword:
         mcp_args["keyword"] = keyword
-    
-    result = await mcp_client.call_tool("notice", "crawl_fresh_notices", mcp_args)
+
+    # 크롤링은 타임아웃을 짧게 설정하고 실패해도 계속 진행
+    result = await mcp_client.call_tool("notice", "crawl_fresh_notices", mcp_args, timeout=5.0)
     
     data = json.loads(result) if isinstance(result, str) else result
     return {"notices": data.get("notices", [])}
@@ -231,14 +238,14 @@ async def _handle_crawl_fresh_notices(tool_input: dict):
 
 async def _handle_search_meals(tool_input: dict):
     query = tool_input.get("query", "")
-    result = await mcp_client.call_tool("meal", "search_meals", {"query": query})
+    result = await mcp_client.call_tool("meal", "search_meals", {"query": query}, timeout=15.0)
     return {"meals": result}
 
 
 
 async def _handle_get_next_shuttle(tool_input: dict):
     route = tool_input.get("route")
-    result = await mcp_client.call_tool("shuttle", "get_next_shuttle", {"route": route})
+    result = await mcp_client.call_tool("shuttle", "get_next_shuttle", {"route": route}, timeout=10.0)
     return {"shuttle": result}
 
 
@@ -248,7 +255,7 @@ async def _handle_search_courses(tool_input: dict):
     result = await mcp_client.call_tool("course", "search_courses", {
         "department": department,
         "keyword": keyword
-    })
+    }, timeout=20.0)
     
     data = json.loads(result) if isinstance(result, str) else result
     return {"found": True, "courses": data.get("courses", [])}
@@ -257,7 +264,13 @@ async def _handle_search_courses(tool_input: dict):
 async def _handle_search_curriculum(tool_input: dict):
     query = tool_input.get("query", "")
     year = tool_input.get("year", "latest")
-    result = await mcp_client.call_tool("curriculum", "search_curriculum", {"query": query, "year": year})
+    result = await mcp_client.call_tool(
+        "curriculum",
+        "search_curriculum",
+        {"query": query, "year": year},
+        timeout=20.0,
+        retries=1,
+    )
     
     data = json.loads(result) if isinstance(result, str) else result
     if not data or not data.get("found"):
@@ -269,7 +282,12 @@ async def _handle_search_curriculum(tool_input: dict):
 async def _handle_get_curriculum_by_semester(tool_input: dict):
     semester = tool_input.get("semester")
     year = tool_input.get("year", "latest")
-    result = await mcp_client.call_tool("curriculum", "search_curriculum", {"query": semester, "year": year})
+    result = await mcp_client.call_tool(
+        "curriculum",
+        "search_curriculum",
+        {"query": semester, "year": year},
+        timeout=20.0,
+    )
     
     data = json.loads(result) if isinstance(result, str) else result
     if not data or not data.get("found"):
@@ -280,33 +298,49 @@ async def _handle_get_curriculum_by_semester(tool_input: dict):
 
 async def _handle_list_programs(tool_input: dict):
     year = tool_input.get("year", "latest")
-    result = await mcp_client.call_tool("curriculum", "list_programs", {"year": year})
+    result = await mcp_client.call_tool("curriculum", "list_programs", {"year": year}, timeout=15.0)
     
     data = json.loads(result) if isinstance(result, str) else result
     return {"found": True, "programs": data.get("programs", [])}
 
 
 async def _handle_get_requirements(tool_input: dict, current_user: Optional[models.User]):
+    """졸업요건 조회 - 사용자 정보 자동 활용"""
     program = tool_input.get("program")
     year = tool_input.get("year")
     
+    # 🆕 사용자 정보 우선 사용
     if current_user:
+        # 학과명 → 프로그램 코드 매핑
         if not program:
             dept_map = {
+                "컴퓨터공학과": "KHU-CSE",
                 "컴퓨터공학부": "KHU-CSE",
                 "소프트웨어융합학과": "KHU-SW",
                 "인공지능학과": "KHU-AI"
             }
             program = dept_map.get(current_user.department, "KHU-CSE")
+            print(f"🎓 사용자 학과({current_user.department}) → 프로그램({program})")
         
+        # 입학년도 자동 사용
         if not year:
             year = str(current_user.admission_year)
+            print(f"🎓 사용자 입학년도 사용: {year}")
+    
+    # 기본값 설정
+    if not program:
+        program = "KHU-CSE"
+    if not year:
+        year = "latest"
     
     try:
-        result = await mcp_client.call_tool("curriculum", "get_requirements", {
-            "program": program,
-            "year": year
-        })
+        print(f"📞 MCP call: get_requirements(program={program}, year={year})")
+        result = await mcp_client.call_tool(
+            "curriculum",
+            "get_requirements",
+            {"program": program, "year": year},
+            timeout=15.0,
+        )
         
         if result is None:
             return {"found": False, "error": "Curriculum MCP 서버 응답 없음"}
@@ -326,28 +360,43 @@ async def _handle_get_requirements(tool_input: dict, current_user: Optional[mode
 
 
 async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[models.User]):
+    """졸업요건 진행도 평가 - 사용자 정보 자동 활용"""
     program = tool_input.get("program")
     year = tool_input.get("year")
-    taken = tool_input.get("taken_courses", [])
     
+    # 🆕 사용자 정보 우선 사용
     if current_user:
         if not program:
             dept_map = {
+                "컴퓨터공학과": "KHU-CSE",
                 "컴퓨터공학부": "KHU-CSE",
                 "소프트웨어융합학과": "KHU-SW",
-                "인공지능학과": "KHU-AI"
+                "인공지능학과": "KHU-AI",
             }
             program = dept_map.get(current_user.department, "KHU-CSE")
+            print(f"🎓 사용자 학과({current_user.department}) → 프로그램({program})")
         
         if not year:
             year = str(current_user.admission_year)
-    
+            print(f"🎓 사용자 입학년도 사용: {year}")
+
+    # 기본값 설정
+    if not program:
+        program = "KHU-CSE"
+    if not year:
+        year = "latest"
+
+    taken_courses = tool_input.get("taken_courses", [])
+
     try:
-        result = await mcp_client.call_tool("curriculum", "evaluate_progress", {
-            "program": program,
-            "year": year,
-            "taken_courses": taken
-        })
+        print(f"📞 MCP call: evaluate_progress(program={program}, year={year}, courses={len(taken_courses)}개)")
+        result = await mcp_client.call_tool(
+            "curriculum",
+            "evaluate_progress",
+            {"program": program, "year": year, "taken_courses": taken_courses},
+            timeout=15.0,
+            retries=1,
+        )
         
         if result is None:
             return {"found": False, "error": "Curriculum MCP 서버 응답 없음"}
@@ -367,7 +416,7 @@ async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[mod
 
 
 async def _handle_get_library_info(tool_input: dict):
-    result = await mcp_client.call_tool("library", "get_library_info", tool_input)
+    result = await mcp_client.call_tool("library", "get_library_info", tool_input, timeout=15.0)
     data = json.loads(result) if isinstance(result, str) else result
     return {
         "library_info": data,
@@ -386,7 +435,7 @@ async def _handle_get_seat_availability(tool_input: dict, library_username: Opti
         **tool_input,
         "username": library_username,
         "password": library_password
-    })
+    }, timeout=15.0)
     return {"library_seats": json.loads(result) if isinstance(result, str) else result}
 
 
@@ -398,16 +447,36 @@ async def _handle_reserve_seat(tool_input: dict, library_username: Optional[str]
         **tool_input,
         "username": library_username,
         "password": library_password
-    })
+    }, timeout=15.0)
     return {"reservation": json.loads(result) if isinstance(result, str) else result}
 
 
 async def _handle_get_today_meal(tool_input: dict):
     meal_type = tool_input.get("meal_type", "lunch")
-    result = await mcp_client.call_tool("meal", "get_today_meal", {"meal_type": meal_type})
-    return {"meals": json.loads(result) if isinstance(result, str) else result}
+    try:
+        result = await mcp_client.call_tool("meal", "get_today_meal", {"meal_type": meal_type}, timeout=15.0)
+        parsed = json.loads(result) if isinstance(result, str) else result
+        
+        # 에러 응답인 경우 빈 배열 반환
+        if "error" in parsed or not parsed.get("success", True):
+            error_msg = parsed.get("message", parsed.get("error", "알 수 없는 오류"))
+            return {"meals": [], "error_message": f"학식 조회 실패: {error_msg}"}
+        
+        # 정상 응답: MealInfo 스키마에 맞게 변환
+        meal_info = {
+            "cafeteria": parsed.get("cafeteria", "학생회관 학생식당"),
+            "meal_type": parsed.get("meal_type", meal_type),
+            "menu": parsed.get("menu") or "메뉴 정보 없음",
+            "price": parsed.get("price") or 5000,
+            "menu_url": parsed.get("menu_url"),
+            "source_url": parsed.get("source_url")
+        }
+        return {"meals": [meal_info]}
+    except Exception as e:
+        print(f"❌ get_today_meal 에러: {e}")
+        return {"meals": [], "error_message": f"학식 조회 중 오류: {str(e)}"}
 
 
 async def _handle_get_cafeteria_info():
-    result = await mcp_client.call_tool("meal", "get_cafeteria_info", {})
+    result = await mcp_client.call_tool("meal", "get_cafeteria_info", {}, timeout=10.0)
     return {"cafeteria": json.loads(result) if isinstance(result, str) else result}

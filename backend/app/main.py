@@ -1,5 +1,5 @@
 """
-FastAPI 메인 애플리케이션 - MCP 기반 (Lazy Start)
+FastAPI 메인 애플리케이션 - MCP 기반 (Lazy Start) + 자동 스케줄링
 """
 from __future__ import annotations
 
@@ -10,10 +10,11 @@ from contextlib import asynccontextmanager
 
 from .database import engine
 from . import models
-from .routers import classrooms, notices, chat, auth, profiles, cache
+from .routers import classrooms, notices, chat, auth, profiles, cache, curriculum
 from .mcp_client import mcp_client
 from .cache import cache_manager
 from .observability import obs_logger
+from .scheduler import start_scheduler, shutdown_scheduler
 
 
 @asynccontextmanager
@@ -40,6 +41,12 @@ async def lifespan(app: FastAPI):
 
     # 4) MCP 서버는 lazy start
     print("ℹ️ MCP 서버는 첫 tool 호출 시 자동으로 시작됩니다.")
+    
+    # 5) 백그라운드 스케줄러 시작
+    try:
+        start_scheduler()
+    except Exception as e:
+        print(f"⚠️ 스케줄러 시작 중 오류: {e}")
 
     yield
 
@@ -53,6 +60,12 @@ async def lifespan(app: FastAPI):
         await cache_manager.disconnect()
     except Exception as e:
         print(f"⚠️ Redis 종료 중 오류: {e}")
+    
+    # 스케줄러 종료
+    try:
+        shutdown_scheduler()
+    except Exception as e:
+        print(f"⚠️ 스케줄러 종료 중 오류: {e}")
 
 
 app = FastAPI(
@@ -80,6 +93,7 @@ app.include_router(classrooms.router)
 app.include_router(notices.router)
 app.include_router(chat.router)
 app.include_router(cache.router)
+app.include_router(curriculum.router)
 
 
 @app.get("/")

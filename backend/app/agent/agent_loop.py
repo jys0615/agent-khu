@@ -87,8 +87,18 @@ async def chat_with_claude_async(
         hint_text = ""
         if hint.get("intent"):
             hint_text = f"\n[HINT] curriculum_intent={hint['intent']}\n"
+        if hint.get("year"):
+            hint_text += f"[HINT] requested_year={hint['year']}\n"
         
         system_prompt = build_system_prompt(current_user, hint_text)
+        
+        # 🔍 디버깅: 사용자 정보 및 system prompt 확인
+        if current_user:
+            print(f"🔍 DEBUG - 로그인 사용자: {current_user.student_id} ({current_user.admission_year}학번, {current_user.department})")
+        else:
+            print(f"🔍 DEBUG - 로그인 안됨 (current_user is None)")
+        print(f"🔍 DEBUG - System Prompt 길이: {len(system_prompt)} chars")
+        print(f"🔍 DEBUG - System Prompt 앞부분:\n{system_prompt[:500]}...")
         
         messages = [{"role": "user", "content": message}]
         
@@ -108,6 +118,7 @@ async def chat_with_claude_async(
             "library_seats": None,
             "reservation": None,
             "needs_library_login": False,
+            "meal_result": None,
         }
         
         while iteration < max_iterations:
@@ -127,9 +138,12 @@ async def chat_with_claude_async(
             if response.stop_reason == "tool_use":
                 tool_results = []
                 
+                print(f"🔍 DEBUG - Claude가 tool을 호출했습니다!")
+                
                 for content in response.content:
                     if content.type == "tool_use":
                         print(f"  🔧 Tool 사용: {content.name}")
+                        print(f"  🔧 Tool 파라미터: {content.input}")
                         mcp_tools_used.append(content.name)
                         
                         # Tool 실행
@@ -158,12 +172,14 @@ async def chat_with_claude_async(
             
             elif response.stop_reason == "end_turn":
                 print("✅ Agent 작업 완료")
+                print(f"🔍 DEBUG - stop_reason: end_turn (tool 호출 안함)")
                 
                 # 최종 응답 추출
                 answer = ""
                 for content in response.content:
                     if content.type == "text":
                         answer += content.text
+                        print(f"🔍 DEBUG - Claude 답변: {answer[:200]}...")
                 
                 # 결과 구성
                 result = _build_final_result(answer, accumulated_results)
@@ -267,6 +283,10 @@ def _accumulate_results(accumulated_results: dict, tool_name: str, result: dict)
     if tool_name == "reserve_seat" and "reservation" in result:
         accumulated_results["reservation"] = result["reservation"]
 
+    # 🧑‍🍳 학식 결과 누적
+    if tool_name == "get_today_meal" and "meals" in result:
+        accumulated_results["meal_result"] = result["meals"]
+
 
 def _build_final_result(answer: str, accumulated_results: dict) -> dict:
     """최종 결과 구성"""
@@ -311,6 +331,23 @@ def _build_final_result(answer: str, accumulated_results: dict) -> dict:
     
     if accumulated_results["needs_library_login"]:
         result["needs_library_login"] = True
+
+    # 🧑‍🍳 학식 결과 구성: 메시지에 출처 링크 포함
+    if accumulated_results["meal_result"]:
+        meal = accumulated_results["meal_result"]
+        result["meals"] = meal
+        result["show_meals"] = True
+        # 답변 텍스트에 원본 링크가 없으면 추가
+        try:
+            src = meal.get("source_url") or meal.get("menu_url")
+            if src:
+                # 중복 추가 방지
+                if src not in result["message"]:
+                    result["message"] = (
+                        result["message"].rstrip() + f"\n원본 메뉴표: {src}"
+                    )
+        except Exception:
+            pass
     
     return result
 

@@ -7,9 +7,13 @@ interface User {
     department: string;
     campus: string;
     admission_year: number;
-    current_grade?: number;
-    interests: string[];
-    completed_credits: number;
+    is_transfer: boolean;
+    transfer_year?: number | null;
+    current_grade?: number | null;
+    interests?: string[];
+    completed_credits?: number | null;
+    double_major?: string | null;
+    minor?: string | null;
 }
 
 interface AuthContextType {
@@ -18,6 +22,7 @@ interface AuthContextType {
     login: (token: string, user: User) => void;
     logout: () => void;
     isAuthenticated: boolean;
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         // 로컬스토리지에서 토큰 불러오기
@@ -35,13 +41,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setToken(savedToken);
             setUser(JSON.parse(savedUser));
         }
+
+        setIsLoading(false);
     }, []);
 
     const login = (newToken: string, newUser: User) => {
+        const normalizedUser: User = {
+            ...newUser,
+            interests: newUser.interests ?? [],
+            completed_credits: newUser.completed_credits ?? 0,
+        };
         setToken(newToken);
-        setUser(newUser);
+        setUser(normalizedUser);
         localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
+        localStorage.setItem('user', JSON.stringify(normalizedUser));
     };
 
     const logout = () => {
@@ -57,7 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             token,
             login,
             logout,
-            isAuthenticated: !!token
+            isAuthenticated: !!token,
+            isLoading,
         }}>
             {children}
         </AuthContext.Provider>

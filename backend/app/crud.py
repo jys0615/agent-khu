@@ -309,8 +309,8 @@ def get_user_by_student_id(db: Session, student_id: str) -> Optional[models.User
 
 def create_user(db: Session, user_data: dict) -> models.User:
     """사용자 생성"""
-    # 학번에서 입학년도 추출
-    admission_year = int(user_data["student_id"][:4])
+    # 학번에서 입학년도 추출 (명시된 경우 우선)
+    admission_year = user_data.get("admission_year") or int(user_data["student_id"][:4])
     
     # 비밀번호 해싱
     password_hash = hash_password(user_data["password"])
@@ -321,6 +321,11 @@ def create_user(db: Session, user_data: dict) -> models.User:
         department=user_data["department"],
         campus=user_data["campus"],
         admission_year=admission_year,
+        name=user_data.get("name"),
+        is_transfer=user_data.get("is_transfer", False),
+        transfer_year=user_data.get("transfer_year"),
+        double_major=user_data.get("double_major"),
+        minor=user_data.get("minor"),
         interests=json.dumps([]),
         preferences=json.dumps({})
     )
@@ -339,6 +344,28 @@ def update_user_profile(db: Session, user_id: int, profile_data: dict) -> Option
     if not user:
         return None
     
+    if "student_id" in profile_data and profile_data.get("student_id"):
+        new_student_id = profile_data["student_id"]
+        existing = get_user_by_student_id(db, new_student_id)
+        if existing and existing.id != user_id:
+            raise ValueError("이미 등록된 학번입니다")
+        user.student_id = new_student_id
+        # 학번 변경 시 입학년도 자동 업데이트 (명시값이 없을 때)
+        if "admission_year" not in profile_data or profile_data.get("admission_year") is None:
+            try:
+                user.admission_year = int(new_student_id[:4])
+            except Exception:
+                pass
+
+    if "admission_year" in profile_data and profile_data.get("admission_year") is not None:
+        user.admission_year = profile_data["admission_year"]
+
+    if "name" in profile_data:
+        user.name = profile_data["name"]
+
+    if "campus" in profile_data and profile_data.get("campus"):
+        user.campus = profile_data["campus"]
+
     if "current_grade" in profile_data:
         user.current_grade = profile_data["current_grade"]
     
@@ -353,6 +380,20 @@ def update_user_profile(db: Session, user_id: int, profile_data: dict) -> Option
     
     if "minor" in profile_data:
         user.minor = profile_data["minor"]
+    
+    if "is_transfer" in profile_data:
+        user.is_transfer = profile_data["is_transfer"]
+    
+    if "transfer_year" in profile_data:
+        user.transfer_year = profile_data["transfer_year"]
+        # 편입생인 경우 학번 자동 계산 (편입년도 - 2)
+        if profile_data["transfer_year"]:
+            calculated_year = profile_data["transfer_year"] - 2
+            # 학번의 앞 4자리만 업데이트 (예: 2019110635 → 1919110635 → 1919110635)
+            if user.student_id and len(user.student_id) >= 4:
+                remainder = user.student_id[4:]  # 뒤의 6자리
+                user.student_id = str(calculated_year) + remainder
+                user.admission_year = calculated_year
     
     if "preferences" in profile_data:
         user.preferences = json.dumps(profile_data["preferences"])
@@ -395,3 +436,73 @@ def create_curriculum(db: Session, curriculum_data: dict) -> models.Curriculum:
     db.refresh(curriculum)
     
     return curriculum
+
+
+def create_curriculum_from_mcp(db: Session, curriculum_data: dict, department: str = "컴퓨터공학부") -> Optional[models.Curriculum]:
+    """
+    MCP에서 받은 졸업요건 데이터 저장
+    
+    Args:
+        curriculum_data: {
+            "year": "2019",
+            "single_major": {...},
+            "double_major": {...},
+            "minor": {...},
+            "special_requirements": {...}
+        }
+        department: 학과명
+    
+    Returns:
+        생성된 Curriculum 객체 또는 None (중복)
+    """
+    try:
+        year = int(curriculum_data.get("year", 2025))
+        
+        # 중복 체크
+        existing = db.query(models.Curriculum).filter(
+            models.Curriculum.department == department,
+            models.Curriculum.admission_year == year
+        ).first()
+        
+        if existing:
+            # 이미 존재하는 경우 업데이트
+            print(f"🔄 {year}학년도 {department} 졸업요건 업데이트")
+            existing.requirements = json.dumps(curriculum_data)
+            db.commit()
+            db.refresh(existing)
+            return existing
+        
+        # 새로 생성
+        print(f"✨ {year}학년도 {department} 졸업요건 생성")
+        curriculum = models.Curriculum(
+            department=department,
+            admission_year=year,
+            requirements=json.dumps(curriculum_data)
+        )
+        
+        db.add(curriculum)
+        db.commit()
+        db.refresh(curriculum)
+        
+        return curriculum
+    
+    except Exception as e:
+        print(f"❌ 졸업요건 저장 실패: {e}")
+        db.rollback()
+        return None
+
+
+def get_curriculum_by_year_range(
+    db: Session,
+    department: str,
+    start_year: int,
+    end_year: int
+) -> List[models.Curriculum]:
+    """
+    연도 범위로 졸업요건 조회
+    """
+    return db.query(models.Curriculum).filter(
+        models.Curriculum.department == department,
+        models.Curriculum.admission_year >= start_year,
+        models.Curriculum.admission_year <= end_year
+    ).all()

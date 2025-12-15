@@ -6,6 +6,8 @@ interface MealCardProps {
         meal_type: string;
         menu: string;
         price: number;
+        source_url?: string;
+        menu_url?: string;
     };
 }
 
@@ -17,6 +19,9 @@ const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     };
 
     const mealInfo = mealTypeLabels[meal.meal_type] || mealTypeLabels['lunch'];
+
+    const rawUrl = meal.source_url || meal.menu_url || '';
+    const normalizedUrl = rawUrl && !/^https?:\/\//i.test(rawUrl) ? `https://${rawUrl}` : rawUrl;
 
     return (
         <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -41,6 +46,20 @@ const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                     <span className="text-sm font-semibold text-green-600">
                         💰 {meal.price.toLocaleString()}원
                     </span>
+                </div>
+            )}
+
+            {/* 원본 링크 버튼 */}
+            {normalizedUrl && (
+                <div className="mt-3 flex justify-end">
+                    <a
+                        href={normalizedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs px-3 py-1 rounded-md bg-khu-primary text-white hover:bg-khu-red-600 transition-colors"
+                    >
+                        원본 메뉴표 보기 ↗
+                    </a>
                 </div>
             )}
         </div>

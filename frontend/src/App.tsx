@@ -8,7 +8,12 @@ import Profile from './pages/Profile';
 
 // 보호된 라우트
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return null; // 로딩 중에는 깜빡임 없이 대기
+    }
+
     return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 

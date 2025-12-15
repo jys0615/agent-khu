@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """
-Curriculum Scraper - 정확한 컬럼 인덱스 사용
+Curriculum Scraper - 과목 카탈로그 + 졸업요건 통합
 """
 from __future__ import annotations
 import re
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import requests
 from lxml import html as lxml_html
 
 # 저장 경로
 DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "curriculum_data.json"
+REQUIREMENTS_SCRAPER_PATH = Path(__file__).resolve().parent / "requirements_scraper.py"
 
 
 def scrape_ce_curriculum(url: str = "https://ce.khu.ac.kr/ce/user/contents/view.do?menuNo=1600054") -> dict:
@@ -161,47 +162,58 @@ def save_data(data: dict) -> None:
 
 
 def main():
-    """메인 실행"""
-    # 크롤링
+    """메인 실행 - 과목 카탈로그 + 졸업요건 통합"""
+    print("🔄 커리큘럼 전체 데이터 갱신 시작...\n")
+    
+    # 1. 기존 데이터 로드
+    existing_data = {}
+    if DATA_PATH.exists():
+        with open(DATA_PATH, "r", encoding="utf-8") as f:
+            existing_data = json.load(f)
+        print("✅ 기존 데이터 로드 완료")
+    
+    # 2. 과목 카탈로그 크롤링 (2024년만 새로 크롤링)
+    print("\n📚 과목 카탈로그 크롤링...")
     new_catalog = scrape_ce_curriculum()
     
     if not new_catalog or not new_catalog.get("catalog"):
-        print("⚠️ 크롤링 실패")
-        return
+        print("⚠️ 과목 크롤링 실패 - 기존 데이터 사용")
+        new_catalog = existing_data.get("2024", {})
+    else:
+        print(f"✅ {len(new_catalog['catalog'])}개 과목 추출")
     
-    # 졸업요건 (기본값)
-    programs = {
-        "KHU-CSE": {
-            "name": "컴퓨터공학전공",
-            "total_credits": 130,
-            "groups": [
-                {"key": "major_basic", "name": "전공기초", "min_credits": 12},
-                {"key": "major_core", "name": "전공필수", "min_credits": 48},
-                {"key": "major_elective", "name": "전공선택", "min_credits": 24},
-                {"key": "liberal_core", "name": "핵심교양", "min_credits": 15}
-            ],
-            "policies": {
-                "english_major_courses_required": 3
-            }
-        }
-    }
+    # 3. 졸업요건 크롤링 (requirements_scraper 호출)
+    print("\n📋 졸업요건 데이터 크롤링...")
+    try:
+        import sys
+        sys.path.insert(0, str(REQUIREMENTS_SCRAPER_PATH.parent))
+        from requirements_scraper import scrape_requirements, merge_requirements_with_catalog
+        
+        # 컴퓨터공학과 요건 크롤링
+        req_data = scrape_requirements("ce")
+        
+        if req_data:
+            print(f"✅ 졸업요건 데이터 추출 완료 ({len(req_data['requirements'])}개 연도)")
+            # 기존 데이터와 통합
+            final_data = merge_requirements_with_catalog(existing_data, req_data)
+        else:
+            print("⚠️ 졸업요건 크롤링 실패 - 기존 데이터 사용")
+            final_data = existing_data
     
-    # 최종 데이터 구성
-    final_data = {
-        "2024": {
-            "year": "2024",
-            "programs": programs,
-            "catalog": new_catalog["catalog"],
-            "crawled_at": new_catalog["crawled_at"]
-        }
-    }
+    except Exception as e:
+        print(f"⚠️ 졸업요건 크롤링 오류: {e}")
+        final_data = existing_data
     
-    # 저장
-    save_data(final_data)
+    # 4. 저장
+    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(DATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(final_data, f, ensure_ascii=False, indent=2)
     
-    print("\n" + "="*50)
-    print(f"✅ 전체 작업 완료: {len(new_catalog['catalog'])}개 과목")
-    print("="*50)
+    print("\n" + "="*60)
+    print(f"✅ 전체 작업 완료")
+    print(f"   - 과목: {len(new_catalog.get('catalog', []))}개")
+    print(f"   - 저장 경로: {DATA_PATH}")
+    print("="*60)
 
 
 if __name__ == "__main__":

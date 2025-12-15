@@ -12,7 +12,7 @@ from typing import Any, Dict
 # Scraper import
 sys.path.append(str(Path(__file__).parent))
 try:
-    from scraper import get_today_meal_with_vision, get_cafeteria_info
+    from scraper import get_today_meal_with_vision, get_cafeteria_info, scrape_weekly_meal
 except ImportError:
     print("⚠️ scraper.py를 찾을 수 없습니다", file=sys.stderr)
 
@@ -87,11 +87,44 @@ async def tool_get_cafeteria_info(args: Dict) -> Dict:
     return get_cafeteria_info()
 
 
+async def tool_scrape_weekly_meal(args: Dict) -> Dict:
+    """주간 식단표 스크래핑 (관리자용)"""
+    try:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        if not api_key:
+            env_path = Path(__file__).parents[2] / "backend" / ".env"
+            if env_path.exists():
+                with open(env_path) as f:
+                    for line in f:
+                        if line.startswith("ANTHROPIC_API_KEY="):
+                            api_key = line.split("=", 1)[1].strip()
+                            break
+        
+        if not api_key:
+            return {
+                "error": "API Key 없음",
+                "message": "ANTHROPIC_API_KEY 환경변수를 설정해주세요"
+            }
+        
+        result = await scrape_weekly_meal(api_key)
+        return result
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "message": "주간 식단표 스크래핑 중 오류 발생"
+        }
+
+
 # MCP 메인 루프
 async def main():
     tools = {
         "get_today_meal": tool_get_today_meal,
         "get_cafeteria_info": tool_get_cafeteria_info,
+        "scrape_weekly_meal": tool_scrape_weekly_meal,
     }
     
     while True:
@@ -124,7 +157,7 @@ async def main():
                     "tools": [
                         {
                             "name": "get_today_meal",
-                            "description": "오늘의 학식 메뉴 조회 (Vision API로 식단표 이미지 분석)",
+                            "description": "오늘의 학식 메뉴 조회 (Vision API로 식단표 이미지 분석). 캐시된 주간 데이터 우선 사용. 결과에 원본 사이트 링크(source_url, menu_url) 포함.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -140,6 +173,14 @@ async def main():
                         {
                             "name": "get_cafeteria_info",
                             "description": "식당 기본 정보 (위치, 운영시간, 가격)",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {}
+                            }
+                        },
+                        {
+                            "name": "scrape_weekly_meal",
+                            "description": "주간 식단표 전체 스크래핑 (관리자용). 월~금 중식/석식 데이터를 한번에 캐싱.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {}

@@ -5,6 +5,7 @@ import MealCard from './MealCard';
 import LibrarySeatCard from './LibrarySeatCard';
 import ShuttleCard from './ShuttleCard';
 import CourseCard from './CourseCard';
+import MapButton from './MapButton';
 
 interface MessageBubbleProps {
     message: {
@@ -17,6 +18,8 @@ interface MessageBubbleProps {
         shuttle?: any;
         shuttles?: any[];
         courses?: any[];
+        mapLink?: string;
+        showMapButton?: boolean;
         timestamp?: string;
     };
 }
@@ -55,7 +58,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                             }`}
                     >
                         {/* 텍스트 내용 */}
-                        <div className={`prose-custom ${message.isUser ? 'text-white' : ''}`}>
+                        <div className={`prose-custom ${message.isUser ? 'prose-user text-white' : ''}`}>
                             <ReactMarkdown
                                 components={{
                                     p: ({ node, ...props }) => (
@@ -82,6 +85,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                                 <p className="text-xs text-gray-600 mt-1">
                                     {message.classroomInfo.floor}층 · {message.classroomInfo.building_name}
                                 </p>
+                                {message.showMapButton && (
+                                    <MapButton mapLink={message.mapLink} />
+                                )}
                             </div>
                         )}
                     </div>

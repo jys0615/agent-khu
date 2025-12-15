@@ -187,6 +187,8 @@ class User(Base):
     
     # 선택 정보
     name = Column(String(100))  # 이름 (선택)
+    is_transfer = Column(Boolean, default=False)  # 편입생 여부
+    transfer_year = Column(Integer)  # 편입년도 (편입생인 경우)
     current_grade = Column(Integer)  # 현재 학년 (1-4)
     double_major = Column(String(100))  # 다전공
     minor = Column(String(100))  # 부전공

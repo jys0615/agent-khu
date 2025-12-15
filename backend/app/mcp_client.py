@@ -5,6 +5,7 @@ MCP 클라이언트 - 공식 MCP SDK 사용 (안정판)
 from __future__ import annotations
 
 import os
+import asyncio
 from typing import Dict, Any, Optional
 from pathlib import Path
 
@@ -91,10 +92,13 @@ class MCPClient:
                 )
 
     async def call_tool(
-        self, 
-        server_name: str, 
-        tool_name: str, 
-        arguments: Dict[str, Any]
+        self,
+        server_name: str,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        *,
+        timeout: float = 20.0,
+        retries: int = 0
     ) -> Any:
         """
         MCP Tool 호출 (매번 세션 생성/종료)
@@ -109,27 +113,35 @@ class MCPClient:
         if not params:
             raise ValueError(f"등록되지 않은 MCP 서버: {server_name}")
 
-        try:
-            # stdio_client context: 프로세스 생성/종료
-            async with stdio_client(params) as (read, write):
-                # ClientSession context: 세션 초기화/종료
-                async with ClientSession(read, write) as session:
-                    # 초기화
-                    await session.initialize()
-                    
-                    # Tool 호출
-                    result = await session.call_tool(tool_name, arguments)
-                    
-                    # 결과 파싱
-                    parsed_result = self._parse_result(result)
-                    
-                    return parsed_result
+        attempt = 0
+        while True:
+            try:
+                # stdio_client context: 프로세스 생성/종료
+                async with stdio_client(params) as (read, write):
+                    # ClientSession context: 세션 초기화/종료
+                    async with ClientSession(read, write) as session:
+                        # 초기화 (타임아웃 적용)
+                        await asyncio.wait_for(session.initialize(), timeout=timeout)
+
+                        # Tool 호출 (타임아웃 적용)
+                        result = await asyncio.wait_for(
+                            session.call_tool(tool_name, arguments), timeout=timeout
+                        )
+
+                        # 결과 파싱
+                        parsed_result = self._parse_result(result)
+
+                        return parsed_result
             
             # 여기서 context 자동 종료 ✅
             
-        except Exception as e:
-            print(f"❌ MCP Tool 호출 실패: {server_name}.{tool_name} - {e}")
-            raise Exception(f"MCP error: {str(e)}")
+            except (asyncio.TimeoutError, Exception) as e:
+                attempt += 1
+                print(f"❌ MCP Tool 호출 실패({attempt}/{retries+1}): {server_name}.{tool_name} - {e}")
+                if attempt > retries:
+                    raise Exception(f"MCP error: {str(e)}")
+                # 짧은 백오프 후 재시도
+                await asyncio.sleep(0.5 * attempt)
 
     def _parse_result(self, result: Any) -> Any:
         """MCP 결과 파싱"""

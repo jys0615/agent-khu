@@ -33,6 +33,8 @@ class MealInfo(BaseModel):
     meal_type: str
     menu: str
     price: int
+    menu_url: Optional[str] = None
+    source_url: Optional[str] = None
 
 class SeatInfo(BaseModel):
     location: str
@@ -103,6 +105,12 @@ class UserRegister(BaseModel):
     password: str
     department: str  # 학과
     campus: str  # 캠퍼스
+    name: Optional[str] = None
+    admission_year: Optional[int] = None
+    is_transfer: bool = False
+    transfer_year: Optional[int] = None
+    double_major: Optional[str] = None
+    minor: Optional[str] = None
     
     @validator('student_id')
     def validate_student_id(cls, v):
@@ -122,6 +130,18 @@ class UserRegister(BaseModel):
             raise ValueError('올바른 캠퍼스를 선택하세요')
         return v
 
+    @validator('admission_year')
+    def validate_admission_year(cls, v, values):
+        if v is None:
+            # 학번에서 자동 추출
+            student_id = values.get('student_id', '')
+            if student_id and student_id.isdigit() and len(student_id) >= 4:
+                return int(student_id[:4])
+            return v
+        if v < 2000 or v > 2100:
+            raise ValueError('올바른 입학년도를 입력하세요')
+        return v
+
 
 # 로그인 요청
 class UserLogin(BaseModel):
@@ -136,6 +156,36 @@ class ProfileSetup(BaseModel):
     completed_credits: Optional[int] = None
     double_major: Optional[str] = None
     minor: Optional[str] = None
+    name: Optional[str] = None
+    campus: Optional[str] = None
+    admission_year: Optional[int] = None
+    student_id: Optional[str] = None
+    is_transfer: Optional[bool] = None
+    transfer_year: Optional[int] = None
+
+    @validator('student_id')
+    def validate_student_id(cls, v):
+        if v is None:
+            return v
+        if not v.isdigit() or len(v) != 10:
+            raise ValueError('학번은 10자리 숫자여야 합니다')
+        return v
+    
+    @validator('campus')
+    def validate_campus(cls, v):
+        if v is None:
+            return v
+        if v not in ['국제캠퍼스', '서울캠퍼스']:
+            raise ValueError('올바른 캠퍼스를 선택하세요')
+        return v
+    
+    @validator('admission_year')
+    def validate_admission_year(cls, v):
+        if v is None:
+            return v
+        if v < 2000 or v > 2100:
+            raise ValueError('올바른 입학년도를 입력하세요')
+        return v
 
 
 # 프로필 수정
@@ -146,18 +196,53 @@ class ProfileUpdate(BaseModel):
     double_major: Optional[str] = None
     minor: Optional[str] = None
     preferences: Optional[dict] = None
+    name: Optional[str] = None
+    campus: Optional[str] = None
+    admission_year: Optional[int] = None
+    student_id: Optional[str] = None
+    is_transfer: Optional[bool] = None
+    transfer_year: Optional[int] = None
+
+    @validator('student_id')
+    def validate_student_id(cls, v):
+        if v is None:
+            return v
+        if not v.isdigit() or len(v) != 10:
+            raise ValueError('학번은 10자리 숫자여야 합니다')
+        return v
+    
+    @validator('campus')
+    def validate_campus(cls, v):
+        if v is None:
+            return v
+        if v not in ['국제캠퍼스', '서울캠퍼스']:
+            raise ValueError('올바른 캠퍼스를 선택하세요')
+        return v
+    
+    @validator('admission_year')
+    def validate_admission_year(cls, v):
+        if v is None:
+            return v
+        if v < 2000 or v > 2100:
+            raise ValueError('올바른 입학년도를 입력하세요')
+        return v
 
 
 # 사용자 응답 (민감정보 제외)
 class UserResponse(BaseModel):
     id: int
     student_id: str
+    name: Optional[str]
     department: str
     campus: str
     admission_year: int
+    is_transfer: bool
+    transfer_year: Optional[int]
     current_grade: Optional[int]
     interests: Optional[List[str]]
     completed_credits: Optional[int]
+    double_major: Optional[str]
+    minor: Optional[str]
     
     class Config:
         orm_mode = True
@@ -175,12 +260,17 @@ class UserResponse(BaseModel):
         return cls(
             id=obj.id,
             student_id=obj.student_id,
+            name=obj.name,
             department=obj.department,
             campus=obj.campus,
             admission_year=obj.admission_year,
+            is_transfer=obj.is_transfer,
+            transfer_year=obj.transfer_year,
             current_grade=obj.current_grade,
             interests=interests,
-            completed_credits=obj.completed_credits
+            completed_credits=obj.completed_credits,
+            double_major=obj.double_major,
+            minor=obj.minor
         )
 
 

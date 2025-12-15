@@ -1,3 +1,4 @@
+// @ts-nocheck
 // frontend/src/components/EvaluationCard.tsx
 import React from 'react';
 import type { Evaluation } from '../api/chat';

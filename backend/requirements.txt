@@ -16,3 +16,4 @@ aiohttp==3.9.1
 mcp>=1.1.0
 argon2-cffi==23.1.0
 beautifulsoup4==4.12.3
+apscheduler==3.10.4

@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface MapButtonProps {
-    mapLink?: string; // 실패 시 폴백용
+    mapLink?: string; // 백엔드에서 내려주는 구글맵 링크가 있으면 우선 사용
 }
 
 // 경희대학교 국제캠퍼스 전자정보대학 좌표
@@ -23,6 +23,13 @@ function buildMobileRouteUrl(startLat: number, startLng: number) {
 
 const MapButton: React.FC<MapButtonProps> = ({ mapLink }) => {
     const handleMapClick = () => {
+        // 1) 백엔드 제공 경로 링크가 있으면 우선 사용 (새 탭)
+        if (mapLink) {
+            window.open(mapLink, '_blank', 'noreferrer');
+            return;
+        }
+
+        // 2) 없으면 클라이언트 위치 기반 네이버 지도 딥링크
         if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {

@@ -345,7 +345,7 @@ rm data/cache.json
 
 ## Frontend 문제
 
-### CORS 오류
+### CORS 오류 (브라우저에 표시되지만, 실제 원인은 백엔드 500일 수 있음)
 
 **증상**:
 ```
@@ -364,6 +364,35 @@ CORS_ALLOW_ORIGINS=http://localhost:5173,http://localhost:3000
 cd backend
 uvicorn app.main:app --reload
 ```
+
+추가 점검:
+- 백엔드 로그에서 `ResponseValidationError`가 있는지 확인 (스키마 불일치가 500을 유발 → CORS처럼 보임)
+```bash
+docker logs agent-khu-backend --tail 100
+```
+-
+
+### 학식 링크 버튼이 열리지 않음
+
+**원인**:
+- 백엔드 `MealInfo` 스키마에 `source_url`, `menu_url` 필드가 없으면 직렬화 단계에서 필드가 제거됨
+- 프론트엔드에서 `response.meals`를 메시지에 전달하지 않음
+
+**해결**:
+1. Backend: `backend/app/schemas.py`의 `MealInfo`에 `menu_url`, `source_url` 추가
+2. Frontend: `frontend/src/components/ChatInterface.tsx`에서 `meals: response.meals` 추가
+3. Frontend: `frontend/src/components/MealCard.tsx`에서 URL에 프로토콜이 없으면 `https://` 자동 보정
+
+### 다크 모드가 부분적으로만 적용됨
+
+**원인**:
+- 페이지 루트 배경에 라이트 그라디언트가 남아있음
+- 카드 외곽선(ring)이 라운딩을 덮어 어색한 모서리 표시
+
+**해결**:
+1. Chat 페이지 루트: 다크 모드일 때 `bg-slate-900` 고정 배경 적용 (파일: `frontend/src/pages/Chat.tsx`)
+2. ChatInterface 컨테이너: `ring` 대신 `border`로 변경, `rounded-[24px]`로 곡률 개선 (파일: `frontend/src/components/ChatInterface.tsx`)
+3. 전체 다크 테마 팔레트 재조정: `index.css`에 slate 계열 색상 적용
 
 ---
 

@@ -164,7 +164,54 @@ async def tool_list_programs(args: Dict) -> Dict:
 
 
 async def tool_get_requirements(args: Dict) -> Dict:
-    """졸업요건 조회"""
+    """졸업요건 조회 - 상세 구조 반환"""
+    global _data_cache
+    
+    if _data_cache is None:
+        _data_cache = load_data()
+    
+    program = args.get("program", "")
+    year = args.get("year", "")
+    
+    # 빈 문자열을 기본값으로 변환
+    if not program or program == "":
+        program = "KHU-CSE"
+    
+    if not year or year == "" or year == "latest":
+        year = "2025"
+    
+    print(f"📝 get_requirements called: program={program}, year={year}")
+    
+    if year not in _data_cache:
+        return {"found": False, "error": f"{year}년도 데이터 없음"}
+    
+    year_data = _data_cache[year]
+    
+    # programs 구조에서 졸업요건 가져오기
+    if "programs" in year_data and program in year_data["programs"]:
+        prog_data = year_data["programs"][program]
+        
+        # single_major 기준 반환
+        if "single_major" in prog_data:
+            single_major = prog_data["single_major"]
+            
+            return {
+                "found": True,
+                "program": program,
+                "program_name": prog_data.get("program_name", "컴퓨터공학과"),
+                "year": year,
+                "track": "single_major",
+                "total_credits": single_major.get("total_credits", 140),
+                "groups": single_major.get("groups", []),
+                "special_requirements": prog_data.get("special_requirements", {}),
+                "description": f"{year}학년도 {prog_data.get('program_name', '컴퓨터공학과')} 단일전공 졸업요건"
+            }
+    
+    return {"found": False, "error": f"{program} 프로그램 없음"}
+
+
+async def tool_evaluate_progress(args: Dict) -> Dict:
+    """졸업요건 평가 - 실제 이수 과목 기반"""
     global _data_cache
     
     if _data_cache is None:
@@ -172,36 +219,51 @@ async def tool_get_requirements(args: Dict) -> Dict:
     
     program = args.get("program", "KHU-CSE")
     year = args.get("year", "latest")
+    taken = args.get("taken_courses", [])
     
     if year == "latest":
         year = "2025"
     
-    if year in _data_cache and "programs" in _data_cache[year]:
-        prog_data = _data_cache[year]["programs"].get(program, {})
-        
-        if prog_data:
-            return {
-                "found": True,
-                "program": program,
-                "name": prog_data.get("name", ""),
-                "total_credits": prog_data.get("total_credits", 130),
-                "groups": prog_data.get("groups", [])
-            }
+    # 졸업요건 먼저 가져오기
+    requirements_result = await tool_get_requirements({"program": program, "year": year})
     
-    return {"found": False}
-
-
-async def tool_evaluate_progress(args: Dict) -> Dict:
-    """졸업요건 평가"""
-    program = args.get("program", "KHU-CSE")
-    year = args.get("year", "latest")
-    taken = args.get("taken_courses", [])
+    if not requirements_result.get("found"):
+        return {"found": False, "error": "졸업요건 없음"}
+    
+    total_credits_required = requirements_result.get("total_credits", 140)
+    groups = requirements_result.get("groups", [])
+    special_requirements = requirements_result.get("special_requirements", {})
+    
+    # 간단한 학점 계산 (실제로는 taken_courses의 학점을 합산해야 함)
+    # 여기서는 임시로 과목당 3학점으로 가정
+    completed_credits = len(taken) * 3
+    
+    # 그룹별 진행도 계산 (실제로는 각 과목이 어느 그룹에 속하는지 매칭 필요)
+    group_progress = []
+    for group in groups:
+        group_progress.append({
+            "key": group.get("key"),
+            "name": group.get("name"),
+            "min_credits": group.get("min_credits"),
+            "completed_credits": 0,  # TODO: 실제 이수 과목 매칭
+            "description": group.get("description", "")
+        })
+    
+    progress_percent = (completed_credits / total_credits_required) * 100 if total_credits_required > 0 else 0
     
     return {
         "found": True,
-        "completed_credits": len(taken) * 3,
-        "remaining_credits": 130 - (len(taken) * 3),
-        "progress_percent": (len(taken) * 3 / 130) * 100
+        "program": program,
+        "program_name": requirements_result.get("program_name"),
+        "year": year,
+        "completed_credits": completed_credits,
+        "total_credits_required": total_credits_required,
+        "remaining_credits": max(0, total_credits_required - completed_credits),
+        "progress_percent": round(progress_percent, 1),
+        "groups": group_progress,
+        "special_requirements": special_requirements,
+        "status": "completed" if progress_percent >= 100 else "on_track" if progress_percent >= 50 else "needs_attention",
+        "message": f"{completed_credits}학점 이수 완료, {max(0, total_credits_required - completed_credits)}학점 남음"
     }
 
 
@@ -277,25 +339,47 @@ async def main():
                         },
                         {
                             "name": "get_requirements",
-                            "description": "졸업요건",
+                            "description": "졸업요건 상세 조회. 사용자가 '졸업요건', '졸업 조건', '몇 학점 필요해' 등을 물으면 이 tool을 반드시 호출하세요. program과 year는 선택사항이며 비워두면 현재 대화중인 학생의 학과와 입학년도가 자동으로 사용됩니다.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "program": {"type": "string"},
-                                    "year": {"type": "string"}
-                                }
+                                    "program": {
+                                        "type": "string",
+                                        "description": "프로그램 코드 (예: KHU-CSE). 비워두면 사용자 학과가 자동 적용됩니다.",
+                                        "default": ""
+                                    },
+                                    "year": {
+                                        "type": "string",
+                                        "description": "입학년도 (예: 2019, 2020). 비워두면 사용자 입학년도가 자동 적용됩니다.",
+                                        "default": ""
+                                    }
+                                },
+                                "required": []
                             }
                         },
                         {
                             "name": "evaluate_progress",
-                            "description": "졸업요건 평가",
+                            "description": "졸업요건 진행도 평가. 사용자가 '졸업 진행도', '남은 학점', '얼마나 들었어' 등을 물으면 이 tool을 호출하세요. program과 year는 선택사항이며 비워두면 현재 대화중인 학생 정보가 자동으로 사용됩니다.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "program": {"type": "string"},
-                                    "year": {"type": "string"},
-                                    "taken_courses": {"type": "array"}
-                                }
+                                    "program": {
+                                        "type": "string",
+                                        "description": "프로그램 코드. 비워두면 사용자 학과가 자동 적용됩니다.",
+                                        "default": ""
+                                    },
+                                    "year": {
+                                        "type": "string",
+                                        "description": "입학년도. 비워두면 사용자 입학년도가 자동 적용됩니다.",
+                                        "default": ""
+                                    },
+                                    "taken_courses": {
+                                        "type": "array",
+                                        "description": "이수한 과목 목록 (과목코드 배열)",
+                                        "default": []
+                                    }
+                                },
+                                "required": []
                             }
                         }
                     ]
