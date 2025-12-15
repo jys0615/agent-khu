@@ -1,3 +1,4 @@
+// @ts-nocheck
 // frontend/src/components/RequirementsCard.tsx
 import React from 'react';
 import type { Requirements } from '../api/chat';

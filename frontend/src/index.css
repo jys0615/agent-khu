@@ -138,6 +138,19 @@
   @apply text-gray-800;
 }
 
+.prose-user p,
+.prose-user strong,
+.prose-user a,
+.prose-user li,
+.prose-user ol,
+.prose-user ul {
+  color: white !important;
+}
+
+.prose-user a {
+  text-decoration: underline;
+}
+
 .prose-custom p {
   @apply mb-2 leading-relaxed;
 }
@@ -168,4 +181,160 @@
   .bubble-bot {
     @apply max-w-[85%];
   }
+}
+
+/* 다크 테마 */
+/* 다크 테마 - ChatGPT/Claude 스타일 */
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+[data-theme='dark'] body {
+  @apply bg-slate-900 text-slate-100;
+}
+
+/* 헤더 */
+[data-theme='dark'] header {
+  @apply bg-slate-800 border-slate-700;
+}
+
+/* 메인 컨테이너 */
+[data-theme='dark'] .bg-white {
+  @apply bg-slate-800;
+}
+
+[data-theme='dark'] .bg-gradient-to-b {
+  @apply bg-slate-900;
+}
+
+/* 카드 */
+[data-theme='dark'] .card,
+[data-theme='dark'] .bubble-bot {
+  @apply bg-slate-800 text-slate-100 border border-slate-700;
+}
+
+[data-theme='dark'] .bubble-user {
+  @apply bg-khu-primary text-white;
+}
+
+/* 버튼 */
+[data-theme='dark'] .btn-primary {
+  @apply bg-khu-primary hover:bg-khu-red-600;
+}
+
+[data-theme='dark'] .btn-secondary {
+  @apply bg-slate-800 text-slate-100 border-slate-600 hover:bg-slate-700;
+}
+
+[data-theme='dark'] .btn-quick {
+  @apply bg-slate-800 text-slate-300 border-slate-700 hover:border-khu-primary hover:bg-slate-700;
+}
+
+/* 입력 필드 */
+[data-theme='dark'] .input-chat {
+  @apply bg-slate-800 text-slate-100 border-slate-700 placeholder-slate-500;
+  @apply focus:border-khu-primary focus:ring-khu-primary;
+}
+
+/* 텍스트 색상 */
+[data-theme='dark'] .text-gray-600,
+[data-theme='dark'] .text-gray-700,
+[data-theme='dark'] .text-gray-800 {
+  @apply text-slate-300;
+}
+
+[data-theme='dark'] .text-gray-500 {
+  @apply text-slate-400;
+}
+
+[data-theme='dark'] .text-gray-400 {
+  @apply text-slate-500;
+}
+
+/* 환영 메시지 카드 */
+[data-theme='dark'] .bg-khu-red-50 {
+  @apply bg-slate-800 border-slate-700;
+}
+
+[data-theme='dark'] .bg-blue-50 {
+  @apply bg-slate-800 border-slate-700;
+}
+
+[data-theme='dark'] .bg-green-50 {
+  @apply bg-slate-800 border-slate-700;
+}
+
+[data-theme='dark'] .bg-purple-50 {
+  @apply bg-slate-800 border-slate-700;
+}
+
+[data-theme='dark'] .bg-orange-50 {
+  @apply bg-slate-800 border-slate-700;
+}
+
+[data-theme='dark'] .bg-yellow-50 {
+  @apply bg-slate-800 border-slate-700;
+}
+
+/* 공지사항/학식 카드 */
+[data-theme='dark'] .border-gray-200,
+[data-theme='dark'] .border-gray-100 {
+  @apply border-slate-700;
+}
+
+[data-theme='dark'] .bg-gray-50 {
+  @apply bg-slate-900;
+}
+
+[data-theme='dark'] .bg-gray-100 {
+  @apply bg-slate-800;
+}
+
+/* 스크롤바 */
+[data-theme='dark'] .scrollbar-custom::-webkit-scrollbar-track {
+  @apply bg-slate-900;
+}
+
+[data-theme='dark'] .scrollbar-custom::-webkit-scrollbar-thumb {
+  @apply bg-slate-700;
+}
+
+[data-theme='dark'] .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-600;
+}
+
+/* 마크다운 */
+[data-theme='dark'] .prose-custom {
+  @apply text-slate-100;
+}
+
+[data-theme='dark'] .prose-custom strong {
+  @apply text-khu-accent;
+}
+
+[data-theme='dark'] .prose-custom a {
+  @apply text-khu-accent hover:text-khu-primary;
+}
+
+[data-theme='dark'] .prose-custom code {
+  @apply bg-slate-900 text-slate-300;
+}
+
+/* 타이핑 인디케이터 */
+[data-theme='dark'] .typing-indicator span {
+  @apply bg-slate-600;
+}
+
+/* 드롭다운 */
+[data-theme='dark'] .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* 그림자 */
+[data-theme='dark'] .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
 }

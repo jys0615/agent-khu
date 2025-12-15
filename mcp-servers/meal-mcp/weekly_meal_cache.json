@@ -1,0 +1,96 @@
+{
+  "created_at": "2025-12-15T07:27:08.505480",
+  "week_start": "2025-12-15",
+  "weekly_data": {
+    "2025-12-15": {
+      "lunch": {
+        "date": "2025-12-15",
+        "day": "월요일",
+        "meal_type": "lunch",
+        "menu": "깻잎제육덮밥",
+        "price": 5000,
+        "available": true
+      },
+      "dinner": {
+        "date": "2025-12-15",
+        "day": "월요일",
+        "meal_type": "dinner",
+        "menu": "돈육낙지덮밥",
+        "price": 5000,
+        "available": true
+      }
+    },
+    "2025-12-16": {
+      "lunch": {
+        "date": "2025-12-16",
+        "day": "화요일",
+        "meal_type": "lunch",
+        "menu": "돈까스마요덮밥",
+        "price": 5000,
+        "available": true
+      },
+      "dinner": {
+        "date": "2025-12-16",
+        "day": "화요일",
+        "meal_type": "dinner",
+        "menu": "버섯불고기덮밥",
+        "price": 5000,
+        "available": true
+      }
+    },
+    "2025-12-17": {
+      "lunch": {
+        "date": "2025-12-17",
+        "day": "수요일",
+        "meal_type": "lunch",
+        "menu": "우불고기",
+        "price": 5000,
+        "available": true
+      },
+      "dinner": {
+        "date": "2025-12-17",
+        "day": "수요일",
+        "meal_type": "dinner",
+        "menu": "통살햄스스무비",
+        "price": 5000,
+        "available": true
+      }
+    },
+    "2025-12-18": {
+      "lunch": {
+        "date": "2025-12-18",
+        "day": "목요일",
+        "meal_type": "lunch",
+        "menu": "후라이드한입닭",
+        "price": 5000,
+        "available": true
+      },
+      "dinner": {
+        "date": "2025-12-18",
+        "day": "목요일",
+        "meal_type": "dinner",
+        "menu": null,
+        "price": null,
+        "available": false
+      }
+    },
+    "2025-12-19": {
+      "lunch": {
+        "date": "2025-12-19",
+        "day": "금요일",
+        "meal_type": "lunch",
+        "menu": "야채고로케",
+        "price": 5000,
+        "available": true
+      },
+      "dinner": {
+        "date": "2025-12-19",
+        "day": "금요일",
+        "meal_type": "dinner",
+        "menu": null,
+        "price": null,
+        "available": false
+      }
+    }
+  }
+}

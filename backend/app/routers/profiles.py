@@ -28,11 +28,33 @@ async def update_my_profile(
     db: Session = Depends(get_db)
 ):
     """프로필 수정"""
-    updated_user = crud.update_user_profile(
-        db,
-        current_user.id,
-        profile_data.dict(exclude_unset=True)
-    )
+    try:
+        updated_user = crud.update_user_profile(
+            db,
+            current_user.id,
+            profile_data.dict(exclude_unset=True)
+        )
+        if not updated_user:
+            from fastapi import HTTPException, status
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="사용자를 찾을 수 없습니다"
+            )
+    except ValueError as e:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        from fastapi import HTTPException, status
+        print(f"프로필 업데이트 오류: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"프로필 수정 중 오류 발생: {str(e)}"
+        )
     
     return schemas.UserResponse.from_orm(updated_user)
 

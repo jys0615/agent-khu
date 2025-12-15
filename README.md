@@ -7,7 +7,7 @@
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-purple.svg)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Agent KHU**는 [Anthropic Claude Sonnet 4](https://www.anthropic.com/)와 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)을 활용하여 경희대학교 학생들에게 개인화된 캠퍼스 정보를 제공하는 AI 시스템입니다.
+**Agent KHU**는 [Anthropic Claude](https://www.anthropic.com/)와 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)을 활용하여 경희대학교 학생들에게 개인화된 캠퍼스 정보를 제공하는 AI 시스템입니다. Vision 기반 인식은 정확도를 위해 Opus 4.5 프롬프트로 개선되었습니다.
 
 ---
 
@@ -34,7 +34,7 @@ Claude Sonnet 4가 **자율적으로** 필요한 정보를 찾아 답변합니�
 | **notice** | 공지사항 검색 | 실시간 크롤링, 키워드 필터링 |
 | **course** | 수강신청 정보 | Playwright 자동화, 1시간 캐싱 |
 | **library** | 도서관 좌석 | 실시간 현황, 예약 기능 |
-| **meal** | 학식 메뉴 | 날짜별 조회, 메뉴 검색 |
+| **meal** | 학식 메뉴 | 날짜별 조회, 메뉴 검색, 원본 링크 포함 |
 | **shuttle** | 셔틀버스 | 실시간 도착 정보 |
 | **classroom** | 강의실 위치 | 전자정보대학관 공간 검색 |
 
@@ -68,6 +68,10 @@ docker-compose up -d
 
 # 4. 데이터베이스 초기화
 docker-compose exec backend python init_db.py
+
+# (선택) Playwright 브라우저 의존성 확인/재설치
+# 컨테이너 내부에서 chromium 및 시스템 라이브러리 설치가 필요합니다.
+# 본 저장소의 Dockerfile은 필요한 의존성을 설치하도록 구성되어 있습니다.
 
 # 5. 접속
 # Frontend: http://localhost:5173
@@ -113,6 +117,18 @@ Agent KHU:
 - 1열람실: 120석 중 45석 이용 가능
 - 2열람실: 80석 중 12석 이용 가능
 ...
+
+### 예시 3: 학식 메뉴 + 원본 링크
+```
+학생: 오늘 학식 알려줘
+
+Agent KHU:
+🍚 학생회관 학생식당 (중식)
+- 메뉴: 깻잎제육덮밥
+- 가격: 5,000원
+
+원본 메뉴표 보기: https://khucoop.com/35 ↗
+```
 ```
 
 ---
@@ -195,6 +211,11 @@ Agent KHU:
 - **[아키텍처](docs/ARCHITECTURE.md)** - 시스템 구조 상세
 - **[문제 해결](docs/TROUBLESHOOTING.md)** - 자주 발생하는 문제
 - **[배포 가이드](docs/DEPLOYMENT.md)** - 프로덕션 배포
+
+### 최근 변경 요약
+- 학식 MCP: 주간 캐시 도입, Vision 정확도 향상 프롬프트, 원본 링크(`source_url`, `menu_url`) 반영
+- Frontend: MealCard에서 링크 버튼 렌더링, 다크모드 UI 개선, 헤더 정리 및 드롭다운 테마 토글 추가
+- Backend: `MealInfo` 스키마에 링크 필드 추가, 에러 처리 강화 및 CORS 문제 해결
 
 ### MCP 서버 문서
 - [Curriculum MCP](mcp-servers/curriculum-mcp/README.md) - 교과과정 (rowspan 처리)

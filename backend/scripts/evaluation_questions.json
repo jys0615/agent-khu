@@ -1,0 +1,304 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "text": "전101 어디야?",
+      "domain": "classroom",
+      "expected_tool": "search_classrooms"
+    },
+    {
+      "id": 2,
+      "text": "전자정보대학관 강의실 위치",
+      "domain": "classroom",
+      "expected_tool": "search_classrooms"
+    },
+    {
+      "id": 3,
+      "text": "303호 강의실은?",
+      "domain": "classroom",
+      "expected_tool": "search_classrooms"
+    },
+    {
+      "id": 4,
+      "text": "경영학과 강의실",
+      "domain": "classroom",
+      "expected_tool": "search_classrooms"
+    },
+    {
+      "id": 5,
+      "text": "컴퓨터공학 강의실",
+      "domain": "classroom",
+      "expected_tool": "search_classrooms"
+    },
+    {
+      "id": 6,
+      "text": "자료구조 몇 학점?",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 7,
+      "text": "알고리즘 언제 개설돼?",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 8,
+      "text": "데이터베이스 과목 정보",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 9,
+      "text": "웹프로그래밍 몇 학점",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 10,
+      "text": "딥러닝 개설 학기",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 11,
+      "text": "머신러닝 과목",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 12,
+      "text": "SW융합대학 공지사항",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 13,
+      "text": "수강신청 공지 있어?",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 14,
+      "text": "장학금 공지",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 15,
+      "text": "최신 공지사항",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 16,
+      "text": "도서관 자리 있어?",
+      "domain": "library",
+      "expected_tool": "search_library"
+    },
+    {
+      "id": 17,
+      "text": "1열람실 좌석 상황",
+      "domain": "library",
+      "expected_tool": "search_library"
+    },
+    {
+      "id": 18,
+      "text": "도서관 몇 시까지 해?",
+      "domain": "library",
+      "expected_tool": "search_library"
+    },
+    {
+      "id": 19,
+      "text": "국제캠 도서관 정보",
+      "domain": "library",
+      "expected_tool": "search_library"
+    },
+    {
+      "id": 20,
+      "text": "오늘 학식 메뉴",
+      "domain": "meal",
+      "expected_tool": "search_meals"
+    },
+    {
+      "id": 21,
+      "text": "내일 학식 뭐야?",
+      "domain": "meal",
+      "expected_tool": "search_meals"
+    },
+    {
+      "id": 22,
+      "text": "이번주 수요일 점심",
+      "domain": "meal",
+      "expected_tool": "search_meals"
+    },
+    {
+      "id": 23,
+      "text": "학생식당 메뉴",
+      "domain": "meal",
+      "expected_tool": "search_meals"
+    },
+    {
+      "id": 24,
+      "text": "아침 메뉴 알려줘",
+      "domain": "meal",
+      "expected_tool": "search_meals"
+    },
+    {
+      "id": 25,
+      "text": "셔틀버스 시간표",
+      "domain": "shuttle",
+      "expected_tool": "search_shuttles"
+    },
+    {
+      "id": 26,
+      "text": "다음 셔틀 언제?",
+      "domain": "shuttle",
+      "expected_tool": "search_shuttles"
+    },
+    {
+      "id": 27,
+      "text": "아침 첫 셔틀",
+      "domain": "shuttle",
+      "expected_tool": "search_shuttles"
+    },
+    {
+      "id": 28,
+      "text": "국제캠 셔틀",
+      "domain": "shuttle",
+      "expected_tool": "search_shuttles"
+    },
+    {
+      "id": 29,
+      "text": "좋은 전공선택 과목 추천해줘",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 30,
+      "text": "졸업요건 알려줘",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 31,
+      "text": "어떤 과목들 들으면 좋을까?",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 32,
+      "text": "AI 관련 과목 추천",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 33,
+      "text": "백엔드 개발 스택 배우려면?",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 34,
+      "text": "전101에서 자료구조 수강신청 할 수 있어?",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 35,
+      "text": "도서관에 알고리즘 책 있어?",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 36,
+      "text": "2019학번 컴공은 전공 필수 몇 학점?",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 37,
+      "text": "이산수학 과목 정보",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 38,
+      "text": "운영체제 몇 학점",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 39,
+      "text": "컴파일러 언제 개설",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 40,
+      "text": "고급 알고리즘 과목",
+      "domain": "curriculum",
+      "expected_tool": "search_curriculum"
+    },
+    {
+      "id": 41,
+      "text": "졸업 요건 확인하려면?",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 42,
+      "text": "학점 평가 받으려면 몇 학점 들어야 해?",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    },
+    {
+      "id": 43,
+      "text": "최근 SW융합대학 공지",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 44,
+      "text": "컴퓨터공학과 공지사항",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 45,
+      "text": "도서관 열람실 예약",
+      "domain": "library",
+      "expected_tool": "search_library"
+    },
+    {
+      "id": 46,
+      "text": "카페테리아 위치",
+      "domain": "complex",
+      "expected_tool": "search_classrooms"
+    },
+    {
+      "id": 47,
+      "text": "학생 상담 어디서 해?",
+      "domain": "classroom",
+      "expected_tool": "search_classrooms"
+    },
+    {
+      "id": 48,
+      "text": "등록금 납부 기간",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 49,
+      "text": "수강신청 기간 언제야?",
+      "domain": "notice",
+      "expected_tool": "search_notices"
+    },
+    {
+      "id": 50,
+      "text": "프로젝트 수업 추천 과목",
+      "domain": "complex",
+      "expected_tool": "multi_tool"
+    }
+  ]
+}

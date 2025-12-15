@@ -13,6 +13,10 @@ const Register: React.FC = () => {
         name: '',
         department: '컴퓨터공학부',
         campus: '국제캠퍼스',
+        admission_year: '',
+        is_transfer: false,
+        double_major: '',
+        minor: '',
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +27,16 @@ const Register: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response = await authApi.register(formData);
+            const admissionYearNum = formData.admission_year ? Number(formData.admission_year) : undefined;
+            const payload: authApi.RegisterData = {
+                ...formData,
+                admission_year: formData.is_transfer ? undefined : admissionYearNum,
+                transfer_year: formData.is_transfer ? admissionYearNum : undefined,
+                double_major: formData.double_major || undefined,
+                minor: formData.minor || undefined,
+            };
+
+            const response = await authApi.register(payload);
             login(response.access_token, response.user);
             navigate('/');
         } catch (err: any) {
@@ -132,19 +145,87 @@ const Register: React.FC = () => {
                             </select>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                캠퍼스 *
-                            </label>
-                            <select
-                                value={formData.campus}
-                                onChange={(e) => setFormData({ ...formData, campus: e.target.value })}
-                                className="input-chat"
-                                required
-                            >
-                                <option value="국제캠퍼스">국제캠퍼스</option>
-                                <option value="서울캠퍼스">서울캠퍼스</option>
-                            </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    {formData.is_transfer ? '편입년도' : '입학년도'}
+                                </label>
+                                <input
+                                    type="number"
+                                    name="admission_year"
+                                    value={formData.admission_year}
+                                    onChange={(e) => setFormData({ ...formData, admission_year: e.target.value })}
+                                    className="input-chat"
+                                    placeholder="2019"
+                                    min={2000}
+                                    max={2100}
+                                />
+                                {formData.is_transfer && formData.admission_year && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        학번: {String(Number(formData.admission_year) - 2).slice(-2)}학번으로 계산됩니다
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    캠퍼스 *
+                                </label>
+                                <select
+                                    value={formData.campus}
+                                    onChange={(e) => setFormData({ ...formData, campus: e.target.value })}
+                                    className="input-chat"
+                                    required
+                                >
+                                    <option value="국제캠퍼스">국제캠퍼스</option>
+                                    <option value="서울캠퍼스">서울캠퍼스</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="is_transfer"
+                                        checked={formData.is_transfer}
+                                        onChange={(e) => setFormData({ ...formData, is_transfer: e.target.checked })}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">편입생입니다</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    복수전공
+                                </label>
+                                <input
+                                    type="text"
+                                    name="double_major"
+                                    value={formData.double_major}
+                                    onChange={(e) => setFormData({ ...formData, double_major: e.target.value })}
+                                    className="input-chat"
+                                    placeholder="예: 경영학과"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    다전공 / 부전공
+                                </label>
+                                <input
+                                    type="text"
+                                    name="minor"
+                                    value={formData.minor}
+                                    onChange={(e) => setFormData({ ...formData, minor: e.target.value })}
+                                    className="input-chat"
+                                    placeholder="예: 데이터과학"
+                                />
+                            </div>
                         </div>
 
                         <button
