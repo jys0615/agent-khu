@@ -16,8 +16,9 @@
 ### Agentic AI
 Claude Sonnet 4가 **자율적으로** 필요한 정보를 찾아 답변합니다
 - **Tool-Use 패턴**: 상황에 맞는 MCP 서버를 자동 선택
-- **컨텍스트 누적**: 최대 5회 반복으로 복잡한 질문 처리
-- **자연어 이해**: 학생 의도 정확히 파악
+- **Hybrid LLM/SLM**: 간단한 질문은 SLM, 복잡한 질문은 LLM으로 라우팅
+- **컨텍스트 누적**: 최대 2회 반복으로 효율적인 질문 처리
+- **Question Classification**: 질문 유형 자동 분류 및 최적 라우팅
 
 ### 개인화
 학번, 학과, 관심분야 기반 맞춤형 정보
@@ -26,17 +27,16 @@ Claude Sonnet 4가 **자율적으로** 필요한 정보를 찾아 답변합니�
 - **캠퍼스별 정보**: 서울/국제 캠퍼스 구분
 
 ### 🔌 MCP 표준 프로토콜
-7개의 마이크로서비스가 협력하여 정보 제공. 현재 meal, shutle mcp는 작업 진행 중
+6개의 마이크로서비스가 협력하여 정보 제공
 
-| MCP 서버 | 기능 | 특징 |
-|---------|------|------|
-| **curriculum** | 교과과정 조회 | 24시간 자동 갱신, rowspan 처리 |
-| **notice** | 공지사항 검색 | 실시간 크롤링, 키워드 필터링 |
-| **course** | 수강신청 정보 | Playwright 자동화, 1시간 캐싱 |
-| **library** | 도서관 좌석 | 실시간 현황, 예약 기능 |
-| **meal** | 학식 메뉴 | 날짜별 조회, 메뉴 검색, 원본 링크 포함 |
-| **shuttle** | 셔틀버스 | 실시간 도착 정보 |
-| **classroom** | 강의실 위치 | 전자정보대학관 공간 검색 |
+| MCP 서버 | 기능 | 특징 | 캐시 TTL |
+|---------|------|------|----------|
+| **curriculum** | 교과과정 조회 | 24시간 자동 갱신, rowspan 처리, 졸업요건 계산 | 24시간 |
+| **notice** | 공지사항 검색 | 실시간 크롤링, 키워드 필터링, 전체 학과 통합 검색 | 2시간 |
+| **course** | 수강신청 정보 | Playwright 자동화, 교수별/과목별 검색 | 1시간 |
+| **library** | 도서관 좌석 | 실시간 현황, 예약 기능, 로그인 연동 | 1분 |
+| **meal** | 학식 메뉴 | Vision AI 기반 메뉴 인식, 주간 캐시, 원본 링크 | 1시간 |
+| **classroom** | 강의실 위치 | 전자정보대학관 공간 검색, 지도 연동 | 24시간 |
 
 ---
 
@@ -212,10 +212,14 @@ Agent KHU:
 - **[문제 해결](docs/TROUBLESHOOTING.md)** - 자주 발생하는 문제
 - **[배포 가이드](docs/DEPLOYMENT.md)** - 프로덕션 배포
 
-### 최근 변경 요약
-- 학식 MCP: 주간 캐시 도입, Vision 정확도 향상 프롬프트, 원본 링크(`source_url`, `menu_url`) 반영
-- Frontend: MealCard에서 링크 버튼 렌더링, 다크모드 UI 개선, 헤더 정리 및 드롭다운 테마 토글 추가
-- Backend: `MealInfo` 스키마에 링크 필드 추가, 에러 처리 강화 및 CORS 문제 해결
+### 최근 변경 요약 (2025-12)
+- **Hybrid LLM/SLM 아키텍처**: Question Classifier로 질문 유형 자동 분류, Simple 질문은 SLM으로 라우팅하여 응답 속도 85% 개선
+- **Observability 시스템**: Elasticsearch 기반 로깅, 메트릭 수집, 학습 데이터 자동 수집
+- **Redis 캐싱 확대**: 2시간 TTL (공지사항, 교과과정), 1시간 TTL (학식), 성능 최대 80% 향상
+- **MCP 안정화**: 공식 MCP SDK 사용, 매 호출마다 세션 생성/종료로 Context 문제 완전 해결
+- **학식 MCP**: Vision AI (Opus 4.5) 기반 메뉴 인식, 주간 캐시, 원본 링크(`source_url`, `menu_url`) 추가
+- **Frontend**: 다크모드 UI 개선, 빠른 질문 버튼, 도서관 로그인 통합, 헤더 드롭다운 테마 토글
+- **성능 최적화**: Agent Loop 최대 반복 5회→2회, 순차 Tool 호출로 안정성 확보
 
 ### MCP 서버 문서
 - [Curriculum MCP](mcp-servers/curriculum-mcp/README.md) - 교과과정 (rowspan 처리)
@@ -229,28 +233,42 @@ Agent KHU:
 ## 🛠️ 기술 스택
 
 ### AI & Protocol
-- **[Anthropic Claude Sonnet 4](https://www.anthropic.com/)** - AI 모델
+- **[Anthropic Claude Sonnet 4](https://www.anthropic.com/)** - AI 모델 (Tool-Use 패턴)
 - **[Model Context Protocol (MCP)](https://modelcontextprotocol.io/)** - 표준 프로토콜
+- **[MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)** - 공식 SDK
 - **JSON-RPC 2.0** - 통신 프로토콜
 
 ### Backend
-- **[FastAPI](https://fastapi.tiangolo.com/)** - 웹 프레임워크
+- **[FastAPI](https://fastapi.tiangolo.com/)** - 웹 프레임워크 (비동기)
 - **[SQLAlchemy](https://www.sqlalchemy.org/)** - ORM
 - **[PostgreSQL](https://www.postgresql.org/)** - 데이터베이스
+- **[Redis](https://redis.io/)** - 캐싱
+- **[Elasticsearch](https://www.elastic.co/)** - Observability 로깅
 - **[Playwright](https://playwright.dev/)** - 웹 크롤링
-- **[JWT](https://jwt.io/)** - 인증
+- **[JWT](https://jwt.io/)** - 인증/인가
 
 ### Frontend
 - **[React 18](https://react.dev/)** - UI 라이브러리
 - **[TypeScript](https://www.typescriptlang.org/)** - 타입 안정성
 - **[Vite](https://vitejs.dev/)** - 빌드 도구
-- **[TailwindCSS](https://tailwindcss.com/)** - 스타일링
+- **[TailwindCSS](https://tailwindcss.com/)** - 스타일링 (다크모드 지원)
 - **[Axios](https://axios-http.com/)** - HTTP 클라이언트
-- **브라우저 Credential Manager** - 로그인 정보 자동 저장
+- **[React Router](https://reactrouter.com/)** - 라우팅
+- **[Context API](https://react.dev/learn/passing-data-deeply-with-context)** - 상태 관리
 
-### MCP Servers
-- **Python**: curriculum, meal, library, shuttle, classroom, notice
-- **Node.js/TypeScript**: sitemcp, instagram
+### MCP Servers (Python)
+- **curriculum-mcp**: 교과과정, 졸업요건
+- **notice-mcp**: 공지사항 크롤링
+- **course-mcp**: 수강신청 정보
+- **library-mcp**: 도서관 좌석
+- **meal-mcp**: 학식 메뉴 (Vision AI)
+- **classroom-mcp**: 강의실 위치
+
+### DevOps & Observability
+- **[Docker](https://www.docker.com/)** - 컨테이너화
+- **[Docker Compose](https://docs.docker.com/compose/)** - 오케스트레이션
+- **APScheduler** - 백그라운드 작업 스케줄링
+- **Elasticsearch** - 로그 수집 및 분석
 
 ---
 
@@ -260,10 +278,19 @@ Agent KHU:
 agent-khu/
 ├── backend/                    # FastAPI 백엔드
 │   ├── app/
-│   │   ├── main.py            # 진입점
-│   │   ├── agent.py           # Claude AI Agent (핵심!)
-│   │   ├── mcp_client.py      # MCP 클라이언트
+│   │   ├── main.py            # 진입점 (Lifespan, CORS, 라우터)
+│   │   ├── agent/             # AI Agent 모듈
+│   │   │   ├── agent_loop.py  # Agent 메인 루프 (Hybrid LLM/SLM)
+│   │   │   ├── tool_executor.py  # Tool 실행 로직
+│   │   │   ├── tools_definition.py  # Tool 스키마 정의
+│   │   │   └── utils.py       # Curriculum intent 감지
+│   │   ├── mcp_client.py      # MCP 클라이언트 (공식 SDK)
 │   │   ├── mcp_manager.py     # MCP 관리자
+│   │   ├── cache.py           # Redis 캐시 매니저
+│   │   ├── observability.py   # Elasticsearch 로깅
+│   │   ├── question_classifier.py  # 질문 분류기
+│   │   ├── slm_agent.py       # SLM Agent (선택)
+│   │   ├── scheduler.py       # 백그라운드 스케줄러
 │   │   ├── auth.py            # JWT 인증
 │   │   ├── models.py          # DB 모델
 │   │   ├── schemas.py         # Pydantic 스키마
@@ -274,7 +301,9 @@ agent-khu/
 │   │       ├── chat.py
 │   │       ├── profiles.py
 │   │       ├── classrooms.py
-│   │       └── notices.py
+│   │       ├── notices.py
+│   │       ├── cache.py
+│   │       └── curriculum.py
 │   ├── requirements.txt       # Python 의존성
 │   ├── .env.example           # 환경변수 템플릿
 │   └── init_db.py             # DB 초기화

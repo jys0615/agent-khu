@@ -4,21 +4,24 @@ interface MapButtonProps {
     mapLink?: string; // 백엔드에서 내려주는 구글맵 링크가 있으면 우선 사용
 }
 
-// 경희대학교 국제캠퍼스 전자정보대학 좌표
-const DEST_NAME = '경희대학교 국제캠퍼스 전자정보대학';
-const DEST_LAT = 37.245435;   // 위도
-const DEST_LNG = 127.081540;  // 경도
+// 기본 목적지(폴백) — 서버에서 mapLink가 없을 때 사용
+const DEST_NAME = '경희대학교 국제캠퍼스';
+const DEST_LAT = 37.2439;
+const DEST_LNG = 127.0785;
 
-function buildMobileRouteUrl(startLat: number, startLng: number) {
-  // m.map.naver.com 딥링크 고정: 대중교통(pathType=2)
-  const url =
-    `https://m.map.naver.com/route.nhn?menu=route` +
-    `&sname=${encodeURIComponent('현재위치')}` +
-    `&sx=${startLng}&sy=${startLat}` +
-    `&ename=${encodeURIComponent(DEST_NAME)}` +
-    `&ex=${DEST_LNG}&ey=${DEST_LAT}` +
-    `&pathType=2`; // 1: 자동차, 2: 대중교통, 3: 도보
-  return url;
+// Google Maps Directions 링크 생성
+function buildGoogleDirectionsUrl(startLat?: number, startLng?: number) {
+    const base = `https://www.google.com/maps/dir/?api=1`;
+    const params = new URLSearchParams();
+    // origin이 있으면 추가 (없으면 현재 위치로 간주)
+    if (typeof startLat === 'number' && typeof startLng === 'number') {
+        params.set('origin', `${startLat},${startLng}`);
+    }
+    params.set('destination', `${DEST_LAT},${DEST_LNG}`);
+    // Google Maps의 경우 travelmode와 dir_action 지정 가능
+    params.set('travelmode', 'transit'); // 대중교통 기본
+    params.set('dir_action', 'navigate');
+    return `${base}&${params.toString()}`;
 }
 
 const MapButton: React.FC<MapButtonProps> = ({ mapLink }) => {
@@ -29,24 +32,24 @@ const MapButton: React.FC<MapButtonProps> = ({ mapLink }) => {
             return;
         }
 
-        // 2) 없으면 클라이언트 위치 기반 네이버 지도 딥링크
+        // 2) 없으면 클라이언트 위치 기반 Google Maps Directions
         if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const { latitude, longitude } = pos.coords;
-                    const url = buildMobileRouteUrl(latitude, longitude);
-                    window.location.href = url;
+                    const url = buildGoogleDirectionsUrl(latitude, longitude);
+                    window.open(url, '_blank', 'noreferrer');
                 },
                 () => {
-                    // 권한 거부/오류면 폴백: 현위치 입력 없이 목적지만 지정 (대중교통)
-                    const fallbackUrl = `https://m.map.naver.com/route.nhn?menu=route&ename=${encodeURIComponent(DEST_NAME)}&ex=${DEST_LNG}&ey=${DEST_LAT}&pathType=2`;
-                    window.location.href = fallbackUrl;
+                    // 권한 거부/오류면 목적지만 지정해 네비게이션 열기
+                    const fallbackUrl = buildGoogleDirectionsUrl();
+                    window.open(fallbackUrl, '_blank', 'noreferrer');
                 },
                 { enableHighAccuracy: true, timeout: 8000 }
             );
         } else {
-            const fallbackUrl = `https://m.map.naver.com/route.nhn?menu=route&ename=${encodeURIComponent(DEST_NAME)}&ex=${DEST_LNG}&ey=${DEST_LAT}&pathType=2`;
-            window.location.href = fallbackUrl;
+            const fallbackUrl = buildGoogleDirectionsUrl();
+            window.open(fallbackUrl, '_blank', 'noreferrer');
         }
     };
 
@@ -54,13 +57,15 @@ const MapButton: React.FC<MapButtonProps> = ({ mapLink }) => {
         <div className="flex justify-start mt-2 ml-10">
             <button
                 onClick={handleMapClick}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-md"
+                className="flex items-center space-x-2 px-4 py-2 bg-[#1a73e8] text-white rounded-lg hover:bg-[#1558d6] transition-colors shadow-md"
             >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 013.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                {/* Simple "G" pin icon reminiscent of Google Maps */}
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C7.582 2 4 5.582 4 10c0 5.25 6.5 11.5 7.2 12.15a1.1 1.1 0 0 0 1.6 0C13.5 21.5 20 15.25 20 10c0-4.418-3.582-8-8-8z" fill="#34A853"/>
+                    <circle cx="12" cy="10" r="4.5" fill="#fff"/>
+                    <path d="M12 6c2.21 0 4 1.79 4 4h-3v2h5c.19-.64.3-1.31.3-2 0-3.314-2.686-6-6-6-2.06 0-3.875 1.034-4.95 2.61l1.64 1.27C9.59 6.44 10.71 6 12 6z" fill="#4285F4"/>
                 </svg>
-                <span>네이버 지도로 길찾기</span>
+                <span>구글맵으로 길찾기</span>
             </button>
         </div>
     );

@@ -122,6 +122,10 @@ async def scrape_weekly_meal(anthropic_api_key: str) -> dict:
             today = datetime.now()
             monday = today - timedelta(days=today.weekday())
             
+            # 월~금 날짜 배열 생성 (이미지 순서대로)
+            week_dates = [monday + timedelta(days=i) for i in range(5)]
+            date_labels = [f"{d.month}월 {d.day}일 {['월','화','수','목','금'][i]}요일" for i, d in enumerate(week_dates)]
+            
             # 4. Vision API로 전체 주간 데이터 추출 (Opus 4.5 - 최고 정확도)
             client = Anthropic(api_key=anthropic_api_key)
             
@@ -143,73 +147,89 @@ async def scrape_weekly_meal(anthropic_api_key: str) -> dict:
                             "type": "text",
                             "text": f"""이 이미지는 경희대학교 국제캠퍼스 학생회관식당 주간메뉴표입니다.
 
+**⚠️ 중요: 이미지 날짜 순서 (왼쪽→오른쪽):**
+1. {date_labels[0]} → {week_dates[0].strftime('%Y-%m-%d')}
+2. {date_labels[1]} → {week_dates[1].strftime('%Y-%m-%d')}
+3. {date_labels[2]} → {week_dates[2].strftime('%Y-%m-%d')}
+4. {date_labels[3]} → {week_dates[3].strftime('%Y-%m-%d')}
+5. {date_labels[4]} → {week_dates[4].strftime('%Y-%m-%d')}
+
 **이번 주 월요일: {monday.strftime('%Y-%m-%d')}**
 
-**⚠️ 중요: 교직원식당(7,500원)은 무시하고, 학생식당만 추출하세요!**
+**⚠️ 핵심 규칙:**
+1. 교직원식당 (상단, 7,500원) → **완전히 무시**
+2. 학생식당 조식 (08:30-10:00) → **완전히 무시**  
+3. **학생식당 중식만 추출** (11:00-14:00 표시된 행들)
+4. **학생식당 석식만 추출** (17:00-18:30 표시된 행)
 
-**테이블 행 구조 (위→아래):**
-1. 🚫 교직원식당 (7,500원, "구성원앱 결제시 7,000원") - ❌ 이 행은 무시!
-2. 🚫 학생식당 조식 (08:30-10:00, 경회인1,000/외부인5,000) - ❌ 이 행도 무시!
-3. ✅ 학생식당 중식 던던(A) - 🎯 이 행에서 추출!
-4. ✅ 학생식당 중식 우아(B) - 🎯 또는 이 행!
-5. ✅ 학생식당 중식 푸짐(C) - 🎯 또는 이 행!
-6. ✅ 학생식당 석식 (17:00-18:30) - 🎯 석식은 이 행!
+**이미지 구조 분석:**
+- 왼쪽 열: 구분 (교직원식당 / 학생식당 등)
+- 상단 행: 날짜 (12월 15일 월요일 ~ 19일 금요일)
+- 각 날짜 열 아래: 해당 날짜의 메뉴들
 
-**추출 규칙:**
-- 중식: "학생식당" 행 중 "던던(A)" 또는 "우아(B)" 또는 "푸짐(C)" 행의 메뉴
-- 석식: "학생식당 (17:00-18:30)" 행의 메뉴
-- 가격: 5,000원 (외부인 기준)
-- "석식 미운영" 표시 → dinner.available = false
+**정확한 메뉴 추출 방법:**
+1. **중식 (11:00-14:00):**
+   - "학생식당" 영역에서 시간대가 "11:00-14:00" 또는 중식 시간대 표시된 셀 찾기
+   - 던던(A), 우아(B), 푸짐(C) 중 **한 가지만** 선택
+   - 각 날짜 열에서 대표 메뉴명 (첫 줄 큰 글씨) 추출
+   - 예: "부대찌개&돈사리", "피자뿌장알밥" 등
 
-**예시 (12월 15일 월요일 기준):**
-- 던던(A) 행 월요일: 깻잎제육덮밥
-- 우아(B) 행 월요일: 돈까스마요덮밥
-- 푸짐(C) 행 월요일: 치즈불닭
-→ 이 중 하나를 lunch.menu로 사용
+2. **석식 (17:00-18:30):**
+   - "학생식당" 영역에서 "17:00-18:30" 또는 "석식" 표시된 행 찾기
+   - 각 날짜 열의 대표 메뉴명 추출
+   - "석식 미운영" 또는 빨간 X 표시 → available = false
 
-**메뉴명 추출 시:**
-- 첫 줄의 대표 메뉴명만 (예: "깻잎제육덮밥")
-- 원산지 정보(돼지:국내산) 제외
-- 반찬류(배추김치, 깍두기) 제외
-- 빨간 도시락 아이콘이 있는 메뉴 우선
+**메뉴명 정제:**
+- 대표 메뉴만 (예: "부대찌개&돈사리")
+- 원산지 표기 제외 (돼지:국내산, 쇠:호주산)
+- 반찬 제외 (쌀밥, 배추김치, 깍두기)
+- 서브메뉴 제외 (안양식복음교회, 꿀마늘튀김 등)
+- TAKE OUT 표시 무시
 
-**JSON 형식:**
+
+**출력 예시 (실제 데이터 기반):**
 ```json
 {{
   "monday": {{
     "date": "{(monday).strftime('%Y-%m-%d')}",
     "day": "월요일",
-    "lunch": {{ "menu": "깻잎제육덮밥", "price": 5000, "available": true }},
-    "dinner": {{ "menu": "돈육낙지덮밥", "price": 5000, "available": true }}
+    "lunch": {{ "menu": "부대찌개&돈사리", "price": 5000, "available": true }},
+    "dinner": {{ "menu": "돈육낙지제육밥", "price": 5000, "available": true }}
   }},
   "tuesday": {{
     "date": "{(monday + timedelta(days=1)).strftime('%Y-%m-%d')}",
     "day": "화요일",
-    "lunch": {{ "menu": "...", "price": 5000, "available": true }},
-    "dinner": {{ "menu": "...", "price": 5000, "available": true }}
+    "lunch": {{ "menu": "피자뿌장알밥", "price": 5000, "available": true }},
+    "dinner": {{ "menu": "피자뿌장알밥", "price": 5000, "available": true }}
   }},
   "wednesday": {{
     "date": "{(monday + timedelta(days=2)).strftime('%Y-%m-%d')}",
     "day": "수요일",
-    "lunch": {{ "menu": "...", "price": 5000, "available": true }},
-    "dinner": {{ "menu": "...", "price": 5000, "available": true }}
+    "lunch": {{ "menu": "슴플제육밥", "price": 5000, "available": true }},
+    "dinner": {{ "menu": "슴플제육밥", "price": 5000, "available": true }}
   }},
   "thursday": {{
     "date": "{(monday + timedelta(days=3)).strftime('%Y-%m-%d')}",
     "day": "목요일",
-    "lunch": {{ "menu": "...", "price": 5000, "available": true }},
-    "dinner": {{ "menu": null, "price": null, "available": false }}
+    "lunch": {{ "menu": "간장돼지불고기", "price": 5000, "available": true }},
+    "dinner": {{ "menu": "대폭김칩쌈밥", "price": 5000, "available": true }}
   }},
   "friday": {{
     "date": "{(monday + timedelta(days=4)).strftime('%Y-%m-%d')}",
     "day": "금요일",
-    "lunch": {{ "menu": "...", "price": 5000, "available": true }},
-    "dinner": {{ "menu": null, "price": null, "available": false }}
+    "lunch": {{ "menu": "대폭김칩쌈밥", "price": 5000, "available": true }},
+    "dinner": {{ "menu": "대폭김칩쌈밥", "price": 5000, "available": true }}
   }}
 }}
 ```
 
-**JSON만 반환하세요.**"""
+**주의사항:**
+- 각 날짜 열을 주의깊게 확인하세요
+- 교직원식당 메뉴를 절대 포함하지 마세요
+- 조식 메뉴를 절대 포함하지 마세요
+- 대표 메뉴명만 간결하게 추출하세요
+
+**JSON만 반환하세요. 설명이나 주석 없이.**"""
                         }
                     ]
                 }]
