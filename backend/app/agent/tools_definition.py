@@ -126,27 +126,33 @@ tools = [
     },
     {
         "name": "get_requirements",
-        "description": "전공/연도별 졸업요건을 조회합니다",
+        "description": "졸업요건 조회. 로그인한 사용자의 경우 program과 year를 생략하면 자동으로 채워집니다.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "program": {"type": "string", "description": "전공 코드 (예: KHU-CSE)"},
-                "year": {"type": "string", "description": "학년도"}
+                "program": {
+                    "type": "string", 
+                    "description": "전공 코드 (예: KHU-CSE). 생략 가능 (로그인 시 자동)"
+                },
+                "year": {
+                    "type": "string", 
+                    "description": "입학년도 (예: 2019). 생략 가능 (로그인 시 자동)"
+                }
             },
-            "required": ["program", "year"]
+            "required": []  # ✅ 필수 아님!
         }
     },
     {
         "name": "evaluate_progress",
-        "description": "수강내역 기준 졸업요건 충족도를 평가합니다",
+        "description": "졸업요건 충족도 평가. program, year 생략 가능 (로그인 시 자동)",
         "input_schema": {
             "type": "object",
             "properties": {
-                "program": {"type": "string"},
-                "year": {"type": "string"},
+                "program": {"type": "string", "description": "전공 코드. 생략 가능"},
+                "year": {"type": "string", "description": "입학년도. 생략 가능"},
                 "taken_courses": {"type": "array", "items": {"type": "string"}}
             },
-            "required": ["program", "year", "taken_courses"]
+            "required": ["taken_courses"] 
         }
     },
     {
@@ -200,15 +206,15 @@ tools = [
 
 # 캐시 TTL 설정 (초 단위)
 CACHE_TTL = {
-    "search_classroom": 86400,  # 24시간
-    "search_notices": 3600,     # 1시간
-    "get_latest_notices": 3600,
+    "search_classroom": 86400,
+    "search_notices": 7200,      # 2시간 (1시간 → 2시간)
+    "get_latest_notices": 7200,
     "search_curriculum": 86400,
-    "get_curriculum_by_semester": 86400,
-    "list_programs": 86400,
-    "get_requirements": 86400,
-    "get_library_info": 300,    # 5분
-    "get_seat_availability": 60,  # 1분 (실시간 정보)
-    "get_next_shuttle": 180,    # 3분
+    "get_requirements": 86400,   # ✅ 추가
+    "evaluate_progress": 3600,   # ✅ 추가 (1시간)
+    "get_library_info": 3600,    # 5분 → 1시간
+    "get_seat_availability": 60,
+    "get_next_shuttle": 300,     # 3분 → 5분
     "get_cafeteria_info": 86400,
+    "get_today_meal": 3600,      # ✅ 추가 (1시간)
 }

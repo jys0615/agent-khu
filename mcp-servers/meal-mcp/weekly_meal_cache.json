@@ -1,5 +1,5 @@
 {
-  "created_at": "2025-12-15T14:22:05.600343",
+  "created_at": "2025-12-18T16:25:13.337265",
   "week_start": "2025-12-15",
   "weekly_data": {
     "2025-12-15": {
@@ -7,7 +7,7 @@
         "date": "2025-12-15",
         "day": "월요일",
         "meal_type": "lunch",
-        "menu": "깻잎제육덮밥",
+        "menu": "부대찌개&라면사리",
         "price": 5000,
         "available": true
       },
@@ -15,7 +15,7 @@
         "date": "2025-12-15",
         "day": "월요일",
         "meal_type": "dinner",
-        "menu": "돈육낙지덮밥",
+        "menu": "돈육낙지비빔밥",
         "price": 5000,
         "available": true
       }
@@ -25,7 +25,7 @@
         "date": "2025-12-16",
         "day": "화요일",
         "meal_type": "lunch",
-        "menu": "돈까스마요덮밥",
+        "menu": "피자복음덮밥",
         "price": 5000,
         "available": true
       },
@@ -33,9 +33,9 @@
         "date": "2025-12-16",
         "day": "화요일",
         "meal_type": "dinner",
-        "menu": "매장휴무일",
-        "price": null,
-        "available": false
+        "menu": "피자복음덮밥",
+        "price": 5000,
+        "available": true
       }
     },
     "2025-12-17": {
@@ -43,7 +43,7 @@
         "date": "2025-12-17",
         "day": "수요일",
         "meal_type": "lunch",
-        "menu": "우동",
+        "menu": "슴플제육비빔밥",
         "price": 5000,
         "available": true
       },
@@ -51,7 +51,7 @@
         "date": "2025-12-17",
         "day": "수요일",
         "meal_type": "dinner",
-        "menu": "김치알밥",
+        "menu": "슴플제육비빔밥",
         "price": 5000,
         "available": true
       }
@@ -61,7 +61,7 @@
         "date": "2025-12-18",
         "day": "목요일",
         "meal_type": "lunch",
-        "menu": "후라이드치킨",
+        "menu": "간장돼지불고기",
         "price": 5000,
         "available": true
       },
@@ -69,9 +69,9 @@
         "date": "2025-12-18",
         "day": "목요일",
         "meal_type": "dinner",
-        "menu": "TAKE OUT",
-        "price": null,
-        "available": false
+        "menu": "대패목살철판알밥",
+        "price": 5000,
+        "available": true
       }
     },
     "2025-12-19": {
@@ -79,7 +79,7 @@
         "date": "2025-12-19",
         "day": "금요일",
         "meal_type": "lunch",
-        "menu": "푸짐피자덮밥",
+        "menu": "짜장덮밥",
         "price": 5000,
         "available": true
       },
@@ -87,9 +87,9 @@
         "date": "2025-12-19",
         "day": "금요일",
         "meal_type": "dinner",
-        "menu": "TAKE OUT",
-        "price": null,
-        "available": false
+        "menu": "창란젓",
+        "price": 5000,
+        "available": true
       }
     }
   }

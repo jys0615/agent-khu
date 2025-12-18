@@ -32,7 +32,8 @@ class CacheManager:
                 encoding="utf-8",
                 decode_responses=True,
                 socket_timeout=5.0,
-                socket_connect_timeout=5.0
+                socket_connect_timeout=5.0,
+                max_connections=10,
             )
             # 연결 테스트
             await self.redis.ping()

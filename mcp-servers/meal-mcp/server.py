@@ -1,219 +1,97 @@
 """
-Meal MCP Server - JSON-RPC stdio 방식
-Vision API로 식단표 이미지 읽기
+Meal MCP Server - Official MCP Server SDK migration
+Provides tools to get today's meals via Vision, cafeteria info, and weekly scraping.
 """
 import asyncio
 import json
-import sys
 import os
+import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict, Any
 
-# Scraper import
-sys.path.append(str(Path(__file__).parent))
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+
+# 호환성: 구버전 mcp 패키지에는 models.Tool이 없을 수 있어 types에서 가져온다
 try:
-    from scraper import get_today_meal_with_vision, get_cafeteria_info, scrape_weekly_meal
-except ImportError:
-    print("⚠️ scraper.py를 찾을 수 없습니다", file=sys.stderr)
+    from mcp.server.models import Tool, TextContent  # type: ignore
+except Exception:  # pragma: no cover - fallback for older SDK
+    from mcp.types import Tool, TextContent
+
+# 패키지/스크립트 실행 모두 지원: /mcp-servers/meal-mcp 경로를 모듈 검색에 추가
+CURRENT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(CURRENT_DIR))
+sys.path.insert(0, str(CURRENT_DIR.parent))
+
+# Local service layer
+try:
+    # 패키지 형태
+    from .service import get_today_meal, get_cafeteria_info_service, scrape_weekly_meal_service
+except Exception:
+    # 스크립트 형태
+    from service import get_today_meal, get_cafeteria_info_service, scrape_weekly_meal_service
 
 
-def _readline():
-    line = sys.stdin.readline()
-    if not line:
-        return None
-    try:
-        return json.loads(line.strip())
-    except Exception:
-        return None
+server = Server("meal-mcp")
 
 
-def _send(obj: dict):
-    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
-    sys.stdout.flush()
+@server.list_tools()
+async def list_tools() -> list[Tool]:
+    return [
+        Tool(
+            name="get_today_meal",
+            description=(
+                "오늘의 학식 메뉴 조회 (Vision API로 식단표 이미지 분석). "
+                "캐시된 주간 데이터 우선 사용. 결과에 원본 사이트 링크 포함"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "meal_type": {
+                        "type": "string",
+                        "enum": ["lunch", "dinner"],
+                        "default": "lunch",
+                        "description": "식사 시간"
+                    }
+                },
+                "required": []
+            },
+        ),
+        Tool(
+            name="get_cafeteria_info",
+            description="식당 기본 정보 (위치, 운영시간, 가격)",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        Tool(
+            name="scrape_weekly_meal",
+            description="주간 식단표 전체 스크래핑 (관리자용)",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+    ]
 
 
-def _result(id_: int, data: Any, is_error: bool = False):
-    content = [{"type": "text", "text": json.dumps(data, ensure_ascii=False, indent=2)}]
-    res = {
-        "jsonrpc": "2.0",
-        "id": id_,
-        "result": {"content": content, "isError": is_error}
-    }
-    _send(res)
+def _json_content(payload: Any) -> list[TextContent]:
+    return [TextContent(type="text", text=json.dumps(payload, ensure_ascii=False), mimeType="application/json")]
 
 
-# Tools
-async def tool_get_today_meal(args: Dict) -> Dict:
-    """오늘의 학식 메뉴 (Vision API)"""
-    try:
-        # Claude API Key 가져오기
-        # Backend에서 환경변수로 전달되거나, .env 파일에서 읽기
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        
-        if not api_key:
-            # .env 파일 읽기 시도
-            env_path = Path(__file__).parents[2] / "backend" / ".env"
-            if env_path.exists():
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("ANTHROPIC_API_KEY="):
-                            api_key = line.split("=", 1)[1].strip()
-                            break
-        
-        if not api_key:
-            return {
-                "error": "API Key 없음",
-                "message": "ANTHROPIC_API_KEY 환경변수를 설정해주세요"
-            }
-        
-        meal_type = args.get("meal_type", "lunch")
-        
-        # Vision API로 메뉴 추출
-        result = await get_today_meal_with_vision(api_key, meal_type)
-        
-        return result
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {
-            "error": str(e),
-            "message": "식단 조회 중 오류가 발생했습니다"
-        }
+@server.call_tool()
+async def call_tool(name: str, arguments: Dict[str, Any] | None) -> list[TextContent]:
+    args = arguments or {}
+    if name == "get_today_meal":
+        payload = await get_today_meal(args)
+        return _json_content(payload)
+    if name == "get_cafeteria_info":
+        payload = get_cafeteria_info_service()
+        return _json_content(payload)
+    if name == "scrape_weekly_meal":
+        payload = await scrape_weekly_meal_service()
+        return _json_content(payload)
+    return _json_content({"error": f"Unknown tool: {name}"})
 
 
-async def tool_get_cafeteria_info(args: Dict) -> Dict:
-    """식당 기본 정보"""
-    return get_cafeteria_info()
-
-
-async def tool_scrape_weekly_meal(args: Dict) -> Dict:
-    """주간 식단표 스크래핑 (관리자용)"""
-    try:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        
-        if not api_key:
-            env_path = Path(__file__).parents[2] / "backend" / ".env"
-            if env_path.exists():
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("ANTHROPIC_API_KEY="):
-                            api_key = line.split("=", 1)[1].strip()
-                            break
-        
-        if not api_key:
-            return {
-                "error": "API Key 없음",
-                "message": "ANTHROPIC_API_KEY 환경변수를 설정해주세요"
-            }
-        
-        result = await scrape_weekly_meal(api_key)
-        return result
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {
-            "error": str(e),
-            "message": "주간 식단표 스크래핑 중 오류 발생"
-        }
-
-
-# MCP 메인 루프
 async def main():
-    tools = {
-        "get_today_meal": tool_get_today_meal,
-        "get_cafeteria_info": tool_get_cafeteria_info,
-        "scrape_weekly_meal": tool_scrape_weekly_meal,
-    }
-    
-    while True:
-        msg = _readline()
-        if msg is None:
-            break
-        
-        # initialize
-        if msg.get("method") == "initialize":
-            _send({
-                "jsonrpc": "2.0",
-                "id": msg.get("id"),
-                "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}}, "serverInfo": {"name": "meal-mcp", "version": "1.0.0"}
-                }
-            })
-            continue
-        
-        # notifications/initialized
-        if msg.get("method") == "notifications/initialized":
-            continue
-        
-        # tools/list
-        if msg.get("method") == "tools/list":
-            _send({
-                "jsonrpc": "2.0",
-                "id": msg.get("id"),
-                "result": {
-                    "tools": [
-                        {
-                            "name": "get_today_meal",
-                            "description": "오늘의 학식 메뉴 조회 (Vision API로 식단표 이미지 분석). 캐시된 주간 데이터 우선 사용. 결과에 원본 사이트 링크(source_url, menu_url) 포함.",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "meal_type": {
-                                        "type": "string",
-                                        "enum": ["lunch", "dinner"],
-                                        "default": "lunch",
-                                        "description": "식사 시간"
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "name": "get_cafeteria_info",
-                            "description": "식당 기본 정보 (위치, 운영시간, 가격)",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {}
-                            }
-                        },
-                        {
-                            "name": "scrape_weekly_meal",
-                            "description": "주간 식단표 전체 스크래핑 (관리자용). 월~금 중식/석식 데이터를 한번에 캐싱.",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {}
-                            }
-                        }
-                    ]
-                }
-            })
-            continue
-        
-        # tools/call
-        if msg.get("method") == "tools/call":
-            req_id = msg.get("id")
-            params = msg.get("params", {})
-            name = params.get("name")
-            arguments = params.get("arguments", {})
-            
-            if name not in tools:
-                _result(req_id, {"error": f"Unknown tool: {name}"}, is_error=True)
-                continue
-            
-            try:
-                result = await tools[name](arguments)
-                _result(req_id, result)
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                _result(req_id, {"error": str(e)}, is_error=True)
-            continue
-        
-        # 기타
-        if "id" in msg:
-            _result(msg["id"], {"status": "noop"})
+    async with stdio_server() as (read, write):
+        await server.run(read, write, server.create_initialization_options())
 
 
 if __name__ == "__main__":

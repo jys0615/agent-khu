@@ -15,6 +15,7 @@ from datetime import datetime
 NOTICE_SCRAPER = "/mcp-servers/notice-mcp/scrapers/khu_scraper.py"
 MEAL_SCRAPER = "/mcp-servers/meal-mcp/scrapers/meal_scraper.py"
 LIBRARY_SCRAPER = "/mcp-servers/library-mcp/scrapers/library_scraper.py"
+CLASSROOM_SCRAPER = "/mcp-servers/classroom-mcp/scrapers/crawl_classrooms.py"
 
 
 def sync_notices():
@@ -89,6 +90,26 @@ def sync_library_seats():
         print(f"❌ 도서관 크롤링 에러: {e}")
     finally:
         db.close()
+
+
+def sync_classrooms():
+    """강의실/교수연구실 정보 동기화 (2개월 주기)"""
+    print("🔄 강의실/연구실 자동 크롤링 시작...")
+    try:
+        result = subprocess.run(
+            ["python3", CLASSROOM_SCRAPER],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+
+        if result.returncode == 0:
+            print(f"✅ 강의실 크롤링 결과: {result.stdout.strip()}")
+        else:
+            print(f"❌ 강의실 크롤링 실패: {result.stderr}")
+
+    except Exception as e:
+        print(f"❌ 강의실 크롤링 에러: {e}")
 
 
 def sync_curriculum():
@@ -188,6 +209,14 @@ def start_scheduler():
         id='sync_library_job',
         name='도서관 좌석 자동 크롤링'
     )
+
+    # 강의실/연구실: 2개월마다
+    scheduler.add_job(
+        func=sync_classrooms,
+        trigger=IntervalTrigger(days=60),
+        id='sync_classrooms_job',
+        name='강의실/연구실 자동 크롤링'
+    )
     
     # 졸업요건: 매주 일요일 오전 2시
     scheduler.add_job(
@@ -233,3 +262,127 @@ def shutdown_scheduler():
         print("✅ 스케줄러 종료 완료")
     except Exception as e:
         print(f"⚠️ 스케줄러 종료 중 오류: {e}")
+
+# scheduler.py 맨 아래에 추가 (shutdown_scheduler 함수 뒤)
+
+def warm_cache():
+    """캐시 워밍업 - 자주 쓰는 데이터 미리 로드"""
+    print("🔥 캐시 워밍업 시작...")
+    
+    try:
+        from .mcp_client import mcp_client
+        from .cache import cache_manager
+        import asyncio
+        
+        async def _warm():
+            await cache_manager.connect()
+            
+            # 1. 오늘 학식 메뉴 (가장 많이 조회)
+            try:
+                meal = await mcp_client.call_tool("meal", "get_today_meal", {"meal_type": "lunch"})
+                cache_key = "tool:get_today_meal:{\"meal_type\":\"lunch\"}"
+                await cache_manager.set(cache_key, {"meals": [meal]}, 3600)
+                print("  ✅ 학식 메뉴 캐시")
+            except:
+                pass
+            
+            # 2. 도서관 기본 정보
+            try:
+                lib_info = await mcp_client.call_tool("library", "get_library_info", {"campus": "global"})
+                cache_key = "tool:get_library_info:{\"campus\":\"global\"}"
+                await cache_manager.set(cache_key, {"library_info": lib_info}, 3600)
+                print("  ✅ 도서관 정보 캐시")
+            except:
+                pass
+            
+            # 3. 최신 졸업요건 (KHU-CSE)
+            try:
+                req = await mcp_client.call_tool("curriculum", "get_requirements", {"program": "KHU-CSE", "year": "latest"})
+                cache_key = "tool:get_requirements:{\"program\":\"KHU-CSE\",\"year\":\"latest\"}"
+                await cache_manager.set(cache_key, {"found": True, "requirements": req}, 86400)
+                print("  ✅ 졸업요건 캐시")
+            except:
+                pass
+            
+            print("✅ 캐시 워밍업 완료")
+        
+        asyncio.run(_warm())
+        
+    except Exception as e:
+        print(f"⚠️ 캐시 워밍업 실패: {e}")
+
+
+def start_scheduler():
+    """스케줄러 시작"""
+    scheduler = BackgroundScheduler()
+    
+    # 공지사항: 1시간마다
+    scheduler.add_job(
+        func=sync_notices,
+        trigger=IntervalTrigger(hours=1),
+        id='sync_notices_job',
+        name='공지사항 자동 크롤링'
+    )
+    
+    # 학식: 매일 오전 7시, 11시, 오후 5시
+    scheduler.add_job(
+        func=sync_meals,
+        trigger='cron',
+        hour='7,11,17',
+        id='sync_meals_job',
+        name='학식 메뉴 자동 크롤링'
+    )
+    
+    # 도서관: 10분마다 (시험 기간에는 더 자주)
+    scheduler.add_job(
+        func=sync_library_seats,
+        trigger=IntervalTrigger(minutes=10),
+        id='sync_library_job',
+        name='도서관 좌석 자동 크롤링'
+    )
+    
+    # 졸업요건: 매주 일요일 오전 2시
+    scheduler.add_job(
+        func=sync_curriculum,
+        trigger='cron',
+        day_of_week='6',  # 일요일
+        hour=2,
+        minute=0,
+        id='sync_curriculum_job',
+        name='졸업요건 자동 업데이트'
+    )
+    
+    # 주간 식단표: 매주 월요일 오전 9시
+    scheduler.add_job(
+        func=sync_weekly_meal,
+        trigger='cron',
+        day_of_week='0',  # 월요일
+        hour=9,
+        minute=0,
+        id='sync_weekly_meal_job',
+        name='주간 식단표 자동 업데이트'
+    )
+    
+    # ✅ 캐시 워밍업: 1시간마다
+    scheduler.add_job(
+        func=warm_cache,
+        trigger=IntervalTrigger(hours=1),
+        id='warm_cache_job',
+        name='캐시 워밍업'
+    )
+    
+    # 서버 시작 시 즉시 실행
+    scheduler.add_job(func=sync_notices, trigger='date', id='sync_notices_startup')
+    scheduler.add_job(func=sync_meals, trigger='date', id='sync_meals_startup')
+    scheduler.add_job(func=sync_library_seats, trigger='date', id='sync_library_startup')
+    scheduler.add_job(func=sync_weekly_meal, trigger='date', id='sync_weekly_meal_startup')
+    scheduler.add_job(func=warm_cache, trigger='date', id='warm_cache_startup')  # ✅ 추가
+    
+    scheduler.start()
+    print("🚀 백그라운드 크롤링 스케줄러 시작")
+    print("  - 공지사항: 1시간마다")
+    print("  - 학식 메뉴: 07시, 11시, 17시")
+    print("  - 도서관 좌석: 10분마다")
+    print("  - 졸업요건: 매주 일요일 오전 2시")
+    print("  - 주간 식단표: 매주 월요일 오전 9시")
+    print("  - 캐시 워밍업: 1시간마다 ⭐ NEW")  # ✅ 추가

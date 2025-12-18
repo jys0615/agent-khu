@@ -12,7 +12,12 @@ import asyncio
 # MCP imports
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+
+# 호환성: 구버전 mcp 패키지에는 models.Tool이 없을 수 있어 types에서 가져온다
+try:
+    from mcp.server.models import Tool, TextContent  # type: ignore
+except Exception:  # pragma: no cover - fallback for older SDK
+    from mcp.types import Tool, TextContent
 
 # Playwright for web scraping
 from playwright.async_api import async_playwright
@@ -24,6 +29,13 @@ from app.database import SessionLocal
 from app import models
 
 server = Server("course-mcp")
+
+
+def _log(msg: str) -> None:
+    try:
+        print(msg, file=sys.stderr)
+    except Exception:
+        pass
 
 class CourseScraper:
     """수강신청 사이트 크롤러"""
@@ -43,10 +55,10 @@ class CourseScraper:
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
             if (datetime.now() - timestamp).seconds < self.cache_duration:
-                print(f"📦 캐시된 데이터 반환: {cache_key}")
+                _log(f"📦 캐시된 데이터 반환: {cache_key}")
                 return cached_data
         
-        print(f"🔍 크롤링 시작: {department} - {semester or '현재학기'}")
+        _log(f"🔍 크롤링 시작: {department} - {semester or '현재학기'}")
         
         async with async_playwright() as p:
             # 헤드리스 모드로 실행 (백그라운드)
@@ -57,27 +69,27 @@ class CourseScraper:
             try:
                 # 1. 수강신청 사이트 접속
                 await page.goto(self.base_url, wait_until="networkidle")
-                print("✅ 사이트 접속 완료")
+                _log("✅ 사이트 접속 완료")
                 
                 # 2. 종합시간표 조회 페이지로 이동
                 # (실제 선택자는 사이트 확인 필요)
                 await page.click("text=종합시간표")
                 await page.wait_for_load_state("networkidle")
-                print("✅ 종합시간표 페이지 이동")
+                _log("✅ 종합시간표 페이지 이동")
                 
                 # 3. 학과 선택
                 await page.select_option("select#department", department)
-                print(f"✅ 학과 선택: {department}")
+                _log(f"✅ 학과 선택: {department}")
                 
                 # 4. 학기 선택 (있다면)
                 if semester:
                     await page.select_option("select#semester", semester)
-                    print(f"✅ 학기 선택: {semester}")
+                    _log(f"✅ 학기 선택: {semester}")
                 
                 # 5. 조회 버튼 클릭
                 await page.click("button#search")
                 await page.wait_for_selector("table.timetable", timeout=10000)
-                print("✅ 시간표 데이터 로드 완료")
+                _log("✅ 시간표 데이터 로드 완료")
                 
                 # 6. 테이블 데이터 파싱
                 courses = await page.evaluate('''
@@ -100,7 +112,7 @@ class CourseScraper:
                     }
                 ''')
                 
-                print(f"✅ {len(courses)}개 과목 파싱 완료")
+                _log(f"✅ {len(courses)}개 과목 파싱 완료")
                 
                 # 캐시 저장
                 self.cache[cache_key] = (courses, datetime.now())
@@ -108,7 +120,7 @@ class CourseScraper:
                 return courses
                 
             except Exception as e:
-                print(f"❌ 크롤링 오류: {e}")
+                _log(f"❌ 크롤링 오류: {e}")
                 return []
                 
             finally:
@@ -195,7 +207,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             department = arguments.get("department", "소프트웨어융합학과")
             keyword = arguments.get("keyword")
             
-            print(f"🚀 과목 검색 시작: {department}")
+            _log(f"🚀 과목 검색 시작: {department}")
             courses = await scraper.get_courses(department)
             
             # 키워드 필터링
@@ -207,7 +219,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     or keyword_lower in c.get("professor", "").lower()
                     or keyword_lower in c.get("code", "").lower()
                 ]
-                print(f"🔍 '{keyword}' 검색 결과: {len(courses)}개")
+                _log(f"🔍 '{keyword}' 검색 결과: {len(courses)}개")
             
             # 결과 정리
             result = {
@@ -216,15 +228,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 "courses": courses[:20] if len(courses) > 20 else courses  # 최대 20개
             }
             
-            return [TextContent(
-                type="text",
-                text=json.dumps(result, ensure_ascii=False, indent=2)
-            )]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2), mimeType="application/json")]
         
         elif name == "get_professor_courses":
             # 교수별 과목 조회
             professor = arguments.get("professor")
-            print(f"👨‍🏫 {professor} 교수 과목 검색")
+            _log(f"👨‍🏫 {professor} 교수 과목 검색")
             
             courses = await scraper.search_by_professor(professor)
             
@@ -234,10 +243,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 "courses": courses
             }
             
-            return [TextContent(
-                type="text",
-                text=json.dumps(result, ensure_ascii=False, indent=2)
-            )]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2), mimeType="application/json")]
         
         elif name == "get_course_by_code":
             # 과목 코드로 검색
@@ -247,33 +253,21 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             course = next((c for c in courses if c.get("code") == code), None)
             
             if course:
-                return [TextContent(
-                    type="text",
-                    text=json.dumps(course, ensure_ascii=False, indent=2)
-                )]
+                return [TextContent(type="text", text=json.dumps(course, ensure_ascii=False, indent=2), mimeType="application/json")]
             else:
-                return [TextContent(
-                    type="text",
-                    text=json.dumps({"error": f"과목 코드 {code}를 찾을 수 없습니다"}, ensure_ascii=False)
-                )]
+                return [TextContent(type="text", text=json.dumps({"error": f"과목 코드 {code}를 찾을 수 없습니다"}, ensure_ascii=False), mimeType="application/json")]
         
         else:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"error": f"Unknown tool: {name}"}, ensure_ascii=False)
-            )]
+            return [TextContent(type="text", text=json.dumps({"error": f"Unknown tool: {name}"}, ensure_ascii=False), mimeType="application/json")]
             
     except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({"error": str(e)}, ensure_ascii=False)
-        )]
+        return [TextContent(type="text", text=json.dumps({"error": str(e)}, ensure_ascii=False), mimeType="application/json")]
 
 async def main():
     """MCP Server 시작"""
-    print("🚀 Course MCP Server 시작")
-    print("📚 종합시간표 자동 조회 서버")
-    print("-" * 40)
+    _log("🚀 Course MCP Server 시작")
+    _log("📚 종합시간표 자동 조회 서버")
+    _log("-" * 40)
     
     async with stdio_server() as (read_stream, write_stream):
         await server.run(

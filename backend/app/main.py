@@ -48,6 +48,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️ 스케줄러 시작 중 오류: {e}")
 
+    # 6) MCP 서버 콜드스타트 완화: 가벼운 워밍업 (비차단)
+    try:
+        import asyncio as _asyncio
+        async def _warmup_curriculum():
+            try:
+                # 최신 연도로 졸업요건 한 번 호출해 서버 기동 및 캐시 생성
+                await mcp_client.call_tool(
+                    "curriculum", "get_requirements", {"program": "KHU-CSE", "year": "latest"}, timeout=10.0, retries=1
+                )
+                print("🔥 MCP 워밍업: curriculum.get_requirements 완료")
+            except Exception as _e:
+                print(f"ℹ️ MCP 워밍업 스킵 (무시 가능): {_e}")
+
+        # 이벤트 루프에 비동기 태스크로 등록
+        _asyncio.create_task(_warmup_curriculum())
+    except Exception as e:
+        print(f"ℹ️ MCP 워밍업 태스크 생성 실패 (무시 가능): {e}")
+
     yield
 
     # 종료

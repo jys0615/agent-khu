@@ -30,12 +30,12 @@ interface Message {
 
 // 빠른 질문 버튼
 const QUICK_QUESTIONS = [
-    { emoji: '📍', text: '전101 어디야', category: 'classroom' },
-    { emoji: '📚', text: '자료구조 몇 학점?', category: 'curriculum' },
+    { emoji: '🍽️', text: '오늘 학식 뭐야', category: 'meal' },
+    { emoji: '📚', text: '도서관 열람실 있어?', category: 'library' },
     { emoji: '📢', text: '최신 공지사항', category: 'notice' },
-    { emoji: '💺', text: '도서관 자리 있어?', category: 'library' },
-    { emoji: '🚌', text: '셔틀버스 시간표', category: 'shuttle' },
-    { emoji: '🎓', text: '졸업요건 알려줘', category: 'requirement' },
+    { emoji: '📖', text: '컴공 과목 검색', category: 'course' },
+    { emoji: '🎓', text: '졸업요건 알려줘', category: 'curriculum' },
+    { emoji: '🏫', text: '강의실 위치', category: 'classroom' },
 ];
 
 const ChatInterface: React.FC = () => {
@@ -248,30 +248,6 @@ const ChatInterface: React.FC = () => {
                                         <span className="text-sm">{q.text}</span>
                                     </button>
                                 ))}
-                            </div>
-                        </div>
-
-                        {/* 기능 안내 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-2">
-                            <div className="p-4 bg-khu-red-50 rounded-xl border border-khu-red-100">
-                                <div className="text-2xl mb-2">🎯</div>
-                                <h4 className="font-semibold text-gray-800 mb-1">강의실 검색</h4>
-                                <p className="text-xs text-gray-600">전자정보대 강의실 위치와 길찾기</p>
-                            </div>
-                            <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                                <div className="text-2xl mb-2">📚</div>
-                                <h4 className="font-semibold text-gray-800 mb-1">교과과정 조회</h4>
-                                <p className="text-xs text-gray-600">과목 학점, 개설학기 정보</p>
-                            </div>
-                            <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-                                <div className="text-2xl mb-2">📢</div>
-                                <h4 className="font-semibold text-gray-800 mb-1">공지사항</h4>
-                                <p className="text-xs text-gray-600">학과 및 학교 최신 공지</p>
-                            </div>
-                            <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                                <div className="text-2xl mb-2">🚌</div>
-                                <h4 className="font-semibold text-gray-800 mb-1">캠퍼스 정보</h4>
-                                <p className="text-xs text-gray-600">셔틀, 도서관, 학식 메뉴</p>
                             </div>
                         </div>
                     </div>

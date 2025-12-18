@@ -107,7 +107,8 @@ class ObservabilityLogger:
             
             await self.es.index(
                 index=self.index_name,
-                document=doc
+                document=doc,
+                refresh=False  # ✅ 추가: 즉시 refresh 안 함 (성능 향상)
             )
             
         except Exception as e:

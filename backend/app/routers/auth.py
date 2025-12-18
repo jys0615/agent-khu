@@ -1,5 +1,6 @@
 from .. import schemas, crud, auth, models  # models 추가
 from ..database import get_db
+from ..cache import cache_manager
 """
 인증 관련 API
 """
@@ -70,6 +71,17 @@ async def login(
     
     # 마지막 로그인 업데이트
     crud.update_last_login(db, user.id)
+
+    # 세션용 도서관 자격 증명 캐시 (TTL 1시간)
+    try:
+        await cache_manager.connect()
+        await cache_manager.set(
+            f"library:cred:{user.student_id}",
+            {"username": user.student_id, "password": form_data.password},
+            ttl=3600,
+        )
+    except Exception as e:
+        print(f"⚠️ library cred cache 실패: {e}")
     
     # 토큰 발급
     access_token = auth.create_access_token(

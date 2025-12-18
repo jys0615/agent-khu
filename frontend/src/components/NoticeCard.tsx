@@ -19,6 +19,11 @@ const NoticeCard: React.FC<NoticeCardProps> = ({ notice }) => {
             color: 'bg-khu-red-50 text-khu-primary border-khu-red-100',
             icon: '💻'
         },
+        cse: {
+            label: '컴퓨터공학부 공지사항',
+            color: 'bg-blue-50 text-khu-accent border-blue-100',
+            icon: '🎓'
+        },
         department: {
             label: '컴퓨터공학부',
             color: 'bg-blue-50 text-khu-accent border-blue-100',
@@ -41,7 +46,11 @@ const NoticeCard: React.FC<NoticeCardProps> = ({ notice }) => {
         }
     };
 
-    const sourceInfo = sourceLabels[notice.source || 'swedu'] || sourceLabels['swedu'];
+    const sourceInfo = sourceLabels[notice.source || 'department'] || {
+        label: notice.source || '공지',
+        color: 'bg-gray-50 text-gray-700 border-gray-200',
+        icon: '📢'
+    };
 
     // 날짜 포맷팅
     const formatDate = (dateStr: string) => {
