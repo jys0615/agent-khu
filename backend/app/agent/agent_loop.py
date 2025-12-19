@@ -93,11 +93,18 @@ async def chat_with_claude_async(
         
         system_prompt = build_system_prompt(current_user, hint_text)
         
-        # 🔍 디버깅: 사용자 정보 및 system prompt 확인
+        # 🔍 디버깅: 사용자 정보 및 시스템 프롬프트 확인
         if current_user:
-            print(f"🔍 DEBUG - 로그인 사용자: {current_user.student_id} ({current_user.admission_year}학번, {current_user.department})")
+            print(f"✅ 로그인 사용자:")
+            print(f"   └─ 학번: {current_user.student_id}")
+            print(f"   └─ 입학년도: {current_user.admission_year}년")
+            print(f"   └─ 학과: {current_user.department}")
+            print(f"   └─ 캠퍼스: {current_user.campus}")
+            print(f"   └─ 이수학점: {current_user.completed_credits or 0}/130")
+            print(f"   └─ [자동 적용] get_requirements, evaluate_progress 툴에서 사용됨")
         else:
-            print(f"🔍 DEBUG - 로그인 안됨 (current_user is None)")
+            print(f"⚠️  미로그인 상태 (current_user is None)")
+            print(f"   └─ 수동으로 program/year를 명시해야 함")
         print(f"🔍 DEBUG - System Prompt 길이: {len(system_prompt)} chars")
         print(f"🔍 DEBUG - System Prompt 앞부분:\n{system_prompt[:500]}...")
         

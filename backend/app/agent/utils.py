@@ -37,27 +37,52 @@ def detect_curriculum_intent(message: str) -> dict:
 
 
 def build_system_prompt(current_user, hint_text: str = "") -> str:
-    """사용자 프로필 기반 system prompt 생성 (간결화)"""
+    """
+    사용자 프로필 기반 system prompt 생성
+    
+    로그인 사용자: 학과, 입학년도, 이수학점 기반 자동 처리
+    미로그인: 기본 설정
+    """
     if current_user:
         return f"""경희대학교 AI 어시스턴트입니다.
 
-학생 정보:
-- {current_user.admission_year}학번, {current_user.department}, {current_user.campus}
-- 이수: {current_user.completed_credits or 0}/130학점
+[사용자 정보 (자동 적용)]
+- 학번: {current_user.student_id}
+- 입학년도: {current_user.admission_year}년
+- 학과: {current_user.department}
+- 캠퍼스: {current_user.campus}
+- 이수 학점: {current_user.completed_credits or 0}/130학점
 
-도구:
-- 학식/도서관/공지사항/수강신청/졸업요건/강의실
+[사용 가능 도구]
+✓ get_requirements: 사용자의 입학년도/학과 기준 졸업요건 자동 조회
+✓ evaluate_progress: 사용자의 졸업 진행도 자동 평가
+✓ search_classroom, search_notices, get_seat_availability, etc.
 
-규칙:
-1. 졸업요건 질문 → 즉시 get_requirements({current_user.admission_year}) 호출
-2. 이미 알고 있는 정보(학번, 학과, 학점)는 다시 묻지 말 것
-3. 친근하고 간결하게 답변{hint_text}"""
+[처리 규칙]
+1. "졸업요건" 관련 질문 → 즉시 get_requirements() 호출 (program, year 자동 적용)
+2. "진행도/평가" 질문 → 즉시 evaluate_progress() 호출 (program, year 자동 적용)
+3. 사용자가 program/year를 명시하면 그 값 우선 사용
+4. 이미 알고 있는 정보(학번, 학과, 학점)는 다시 묻지 말 것
+5. 응답: 친근하고 정확하게, 자신 있게 정보 제시
+
+[예시]
+- 사용자: "졸업요건을 알려줄래?" 
+  → 자동: get_requirements() 호출 (2021년도 컴퓨터공학과 기준)
+  
+- 사용자: "졸업까지 몇 학점 남았어?"
+  → 자동: evaluate_progress() 호출 (2021년도 기준, 현재 이수학점 적용){hint_text}"""
     else:
         return f"""경희대학교 AI 어시스턴트입니다.
 
-도구: 학식/도서관/공지사항/수강신청/졸업요건/강의실
+[미로그인 상태]
+사용자 정보가 없습니다. 필요시 안내해주세요.
 
-규칙:
-1. 졸업요건 질문 → get_requirements() 즉시 호출
-2. 추가 질문 없이 바로 도구 사용
-3. 간결하게 답변{hint_text}"""
+[사용 가능 도구]
+✓ get_requirements: 졸업요건 조회 (program, year 필수 명시)
+✓ evaluate_progress: 진행도 평가
+✓ search_classroom, search_notices, get_seat_availability, etc.
+
+[처리 규칙]
+1. 로그인하지 않았다면 학과/학번을 물어본 후 처리
+2. 도구 호출 시 program, year 명시 필요
+3. 간결하고 친근하게 응답{hint_text}"""

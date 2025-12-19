@@ -78,10 +78,16 @@ def parse_buildings_from_html(html: str) -> List[Building]:
     buildings: List[Building] = []
     for b in buildings_raw:
         try:
+            # ✅ 건물명 정규화: 줄바꿈, 탭, 여러 공백을 단일 공백으로 변환
+            building_name = str(b["mapNm"]).strip()
+            # 줄바꿈, 탭 제거 및 여러 공백을 단일 공백으로
+            building_name = re.sub(r'[\r\n\t]+', ' ', building_name)
+            building_name = re.sub(r'\s+', ' ', building_name).strip()
+            
             buildings.append(
                 Building(
                     map_id=int(b["mapId"]),
-                    name=str(b["mapNm"]).strip(),
+                    name=building_name,
                     lat=float(b["xCoord"]),
                     lng=float(b["yCoord"]),
                     map_number=int(b.get("mapNumber", 0) or 0),

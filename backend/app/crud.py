@@ -1,6 +1,7 @@
 """
 데이터베이스 CRUD 작업
 """
+import re
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from . import models, schemas
@@ -50,7 +51,15 @@ def search_classrooms(
     query: str,
     limit: int = 10
 ) -> List[models.Classroom]:
-    """강의실/공간 검색 (개선판)"""
+    """
+    강의실/공간 검색 (개선판)
+    
+    검색 우선순위:
+    1. 정확한 코드/번호 매칭 (예: "전101", "101")
+    2. 부분 문자열 매칭 (예: "전", "323", "강의실")
+    3. 건물명 매칭 (예: "전자정보대학관", "정보관", "공학관")
+    4. 교수명 매칭 (예: "이성원")
+    """
     search_term = query.strip()
     
     # LIKE 패턴 (부분 일치)
@@ -69,21 +78,42 @@ def search_classrooms(
         with_prefix = f"전{search_term}"
         search_codes.extend([with_prefix, with_prefix.upper()])
     
-    # OR 조건으로 검색 (우선순위: 정확한 매칭 → LIKE 매칭)
+    # OR 조건으로 검색 + 우선순위 점수로 정렬
+    from sqlalchemy import or_, and_, case
+    
+    # 우선순위 점수 계산 (높을수록 우선)
+    priority_score = case(
+        # 1순위: 정확한 code 매칭 (100점)
+        (models.Classroom.code.in_(search_codes), 100),
+        # 2순위: 정확한 room_number 매칭 (90점)
+        (models.Classroom.room_number.in_(search_codes), 90),
+        # 3순위: code 부분 일치 (80점)
+        (models.Classroom.code.ilike(search_pattern), 80),
+        # 4순위: room_number 부분 일치 (70점)
+        (models.Classroom.room_number.ilike(search_pattern), 70),
+        # 5순위: 교수명 매칭 (60점)
+        (models.Classroom.professor_name.ilike(search_pattern), 60),
+        # 6순위: room_name 매칭 (50점)
+        (models.Classroom.room_name.ilike(search_pattern), 50),
+        # 7순위: keywords 매칭 (40점)
+        (models.Classroom.keywords.ilike(search_pattern), 40),
+        # 8순위: 건물명 매칭 (30점)
+        (models.Classroom.building_name.ilike(search_pattern), 30),
+        else_=0
+    )
+    
     results = db.query(models.Classroom).filter(
         or_(
-            # 1순위: 정확한 코드 매칭
             models.Classroom.code.in_(search_codes),
             models.Classroom.room_number.in_(search_codes),
-            
-            # 2순위: 부분 일치
             models.Classroom.code.ilike(search_pattern),
             models.Classroom.room_number.ilike(search_pattern),
             models.Classroom.room_name.ilike(search_pattern),
             models.Classroom.professor_name.ilike(search_pattern),
-            models.Classroom.keywords.ilike(search_pattern)
+            models.Classroom.keywords.ilike(search_pattern),
+            models.Classroom.building_name.ilike(search_pattern)
         )
-    ).limit(limit).all()
+    ).order_by(priority_score.desc()).limit(limit).all()
     
     return results
 

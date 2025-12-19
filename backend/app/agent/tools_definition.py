@@ -126,25 +126,42 @@ tools = [
     },
     {
         "name": "get_requirements",
-        "description": "졸업요건 조회. 로그인한 사용자의 경우 program과 year를 생략하면 자동으로 채워집니다.",
+        "description": """졸업요건 조회
+        
+[로그인 사용자]
+- program, year 생략 가능 (자동으로 학과/입학년도 적용)
+- 예: "우리 학과 졸업요건이 뭐야?" → 자동으로 사용자의 학과/입학년도 적용
+
+[미로그인 사용자]
+- program, year 명시 필수
+- 예: program='KHU-CSE', year='2021'""",
         "input_schema": {
             "type": "object",
             "properties": {
                 "program": {
                     "type": "string", 
-                    "description": "전공 코드 (예: KHU-CSE). 생략 가능 (로그인 시 자동)"
+                    "description": "전공 코드 (예: KHU-CSE). 로그인 시 생략 가능"
                 },
                 "year": {
                     "type": "string", 
-                    "description": "입학년도 (예: 2019). 생략 가능 (로그인 시 자동)"
+                    "description": "입학년도 (예: 2019). 로그인 시 생략 가능"
                 }
             },
-            "required": []  # ✅ 필수 아님!
+            "required": []
         }
     },
     {
         "name": "evaluate_progress",
-        "description": "졸업요건 충족도 평가. program, year 생략 가능 (로그인 시 자동)",
+        "description": """졸업요건 진행도 평가
+        
+[로그인 사용자]
+- program, year 생략 가능 (자동으로 학과/입학년도 적용)
+- 사용자의 이수 학점 자동 반영
+- 예: "졸업까지 몇 학점 남았어?" → 자동으로 현재 학점 기반 계산
+
+[미로그인 사용자]
+- program, year, taken_courses 명시 필수
+- taken_courses: 이수한 과목 코드 배열""",
         "input_schema": {
             "type": "object",
             "properties": {
