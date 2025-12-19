@@ -289,3 +289,45 @@ class ChatRequest(BaseModel):
     library_username: Optional[str] = None
     library_password: Optional[str] = None
     # 토큰은 헤더로 받을 예정 (Authorization: Bearer <token>)
+
+
+# ========== 졸업요건 관련 응답 스키마 ==========
+
+class GraduationRequirements(BaseModel):
+    """졸업요건 정보"""
+    student_id: str
+    department: str
+    admission_year: int
+    found: bool
+    requirements: Optional[Dict[str, Any]] = None
+
+
+class GraduationProgress(BaseModel):
+    """졸업 진행도 평가"""
+    student_id: str
+    department: str
+    admission_year: int
+    completed_credits: int
+    found: bool
+    evaluation: Optional[Dict[str, Any]] = None
+
+
+class GraduationStatus(BaseModel):
+    """졸업 요건 통합 현황 (requirements + progress)"""
+    student_id: str
+    name: Optional[str]
+    department: str
+    admission_year: int
+    completed_credits: int
+    
+    # 졸업요건
+    requirements: Dict[str, Any] = {
+        "found": False,
+        "data": None
+    }
+    
+    # 진행도
+    progress: Dict[str, Any] = {
+        "found": False,
+        "data": None
+    }

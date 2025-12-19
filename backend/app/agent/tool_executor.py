@@ -383,36 +383,45 @@ async def _handle_list_programs(tool_input: dict):
 
 
 async def _handle_get_requirements(tool_input: dict, current_user: Optional[models.User]):
-    """졸업요건 조회 - 사용자 정보 자동 활용"""
+    """
+    졸업요건 조회 - 사용자 정보 자동 활용
+    
+    로그인된 사용자의 경우:
+    - program이 비어있으면 current_user.department에서 자동 추출
+    - year가 비어있으면 current_user.admission_year 사용
+    """
     program = tool_input.get("program")
     year = tool_input.get("year")
     
-    # 🆕 사용자 정보 우선 사용
+    # 학과명 → 프로그램 코드 매핑 (확장 가능)
+    dept_map = {
+        "컴퓨터공학과": "KHU-CSE",
+        "컴퓨터공학부": "KHU-CSE",
+        "소프트웨어융합학과": "KHU-SW",
+        "인공지능학과": "KHU-AI",
+        "전자공학과": "KHU-ECE",
+        "산업경영공학과": "KHU-IME"
+    }
+    
+    # 사용자 정보 우선 사용
     if current_user:
-        # 학과명 → 프로그램 코드 매핑
         if not program:
-            dept_map = {
-                "컴퓨터공학과": "KHU-CSE",
-                "컴퓨터공학부": "KHU-CSE",
-                "소프트웨어융합학과": "KHU-SW",
-                "인공지능학과": "KHU-AI"
-            }
             program = dept_map.get(current_user.department, "KHU-CSE")
-            print(f"🎓 사용자 학과({current_user.department}) → 프로그램({program})")
+            print(f"✅ 사용자 학과({current_user.department}) → 프로그램({program})")
         
-        # 입학년도 자동 사용
         if not year:
             year = str(current_user.admission_year)
-            print(f"🎓 사용자 입학년도 사용: {year}")
+            print(f"✅ 사용자 입학년도({current_user.admission_year}) 적용")
     
-    # 기본값 설정
+    # 기본값 설정 (사용자 미로그인 또는 학과 미매핑)
     if not program:
         program = "KHU-CSE"
     if not year:
         year = "latest"
     
     try:
-        print(f"📞 MCP call: get_requirements(program={program}, year={year})")
+        print(f"📞 MCP call: get_requirements(program={program}, year={year}, user={current_user.student_id if current_user else 'anonymous'})")
+        
         result = await mcp_client.call_tool(
             "curriculum",
             "get_requirements",
@@ -431,6 +440,7 @@ async def _handle_get_requirements(tool_input: dict, current_user: Optional[mode
         if isinstance(data, dict) and data.get("error"):
             return {"found": False, "error": data}
         
+        print(f"✅ 졸업요건 조회 성공: {program} {year}학번")
         return {"found": True, "requirements": data}
     
     except Exception as e:
@@ -439,25 +449,36 @@ async def _handle_get_requirements(tool_input: dict, current_user: Optional[mode
 
 
 async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[models.User]):
-    """졸업요건 진행도 평가 - 사용자 정보 자동 활용"""
+    """
+    졸업요건 진행도 평가 - 사용자 정보 자동 활용
+    
+    로그인된 사용자의 경우:
+    - program이 비어있으면 current_user.department에서 자동 추출
+    - year가 비어있으면 current_user.admission_year 사용
+    """
     program = tool_input.get("program")
     year = tool_input.get("year")
+    taken_courses = tool_input.get("taken_courses", [])
     
-    # 🆕 사용자 정보 우선 사용
+    # 학과명 → 프로그램 코드 매핑
+    dept_map = {
+        "컴퓨터공학과": "KHU-CSE",
+        "컴퓨터공학부": "KHU-CSE",
+        "소프트웨어융합학과": "KHU-SW",
+        "인공지능학과": "KHU-AI",
+        "전자공학과": "KHU-ECE",
+        "산업경영공학과": "KHU-IME"
+    }
+    
+    # 사용자 정보 우선 사용
     if current_user:
         if not program:
-            dept_map = {
-                "컴퓨터공학과": "KHU-CSE",
-                "컴퓨터공학부": "KHU-CSE",
-                "소프트웨어융합학과": "KHU-SW",
-                "인공지능학과": "KHU-AI",
-            }
             program = dept_map.get(current_user.department, "KHU-CSE")
-            print(f"🎓 사용자 학과({current_user.department}) → 프로그램({program})")
-        
+            print(f"✅ 사용자 학과({current_user.department}) → 프로그램({program})")
+
         if not year:
             year = str(current_user.admission_year)
-            print(f"🎓 사용자 입학년도 사용: {year}")
+            print(f"✅ 사용자 입학년도({current_user.admission_year}) 적용")
 
     # 기본값 설정
     if not program:
@@ -465,10 +486,9 @@ async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[mod
     if not year:
         year = "latest"
 
-    taken_courses = tool_input.get("taken_courses", [])
-
     try:
-        print(f"📞 MCP call: evaluate_progress(program={program}, year={year}, courses={len(taken_courses)}개)")
+        print(f"📞 MCP call: evaluate_progress(program={program}, year={year}, courses={len(taken_courses)}개, user={current_user.student_id if current_user else 'anonymous'})")
+        
         result = await mcp_client.call_tool(
             "curriculum",
             "evaluate_progress",
@@ -487,6 +507,7 @@ async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[mod
         if isinstance(data, dict) and data.get("error"):
             return {"found": False, "error": data}
         
+        print(f"✅ 진행도 평가 완료: {program} {year}학번")
         return {"found": True, "evaluation": data}
     
     except Exception as e:
