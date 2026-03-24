@@ -254,7 +254,7 @@ class UserResponse(BaseModel):
         if obj.interests:
             try:
                 interests = json.loads(obj.interests)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 pass
         
         return cls(

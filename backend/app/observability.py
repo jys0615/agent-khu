@@ -2,12 +2,15 @@
 Observability Logger for Agent KHU
 모든 사용자 상호작용을 Elasticsearch에 로깅하여 SLM 학습 데이터 수집
 """
+import logging
 from elasticsearch import Elasticsearch, AsyncElasticsearch
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import json
 import os
 from contextlib import asynccontextmanager
+
+log = logging.getLogger(__name__)
 
 class ObservabilityLogger:
     """모든 Agent 상호작용을 로깅"""
@@ -45,12 +48,12 @@ class ObservabilityLogger:
                         }
                     }
                 )
-                print(f"✅ Elasticsearch 인덱스 생성: {self.index_name}")
-            
-            print(f"✅ Elasticsearch 연결 성공: {self.es_url}")
-            
+                log.info("Elasticsearch 인덱스 생성: %s", self.index_name)
+
+            log.info("Elasticsearch 연결 성공: %s", self.es_url)
+
         except Exception as e:
-            print(f"⚠️ Elasticsearch 연결 실패 (로깅 비활성화): {e}")
+            log.warning("Elasticsearch 연결 실패 (로깅 비활성화): %s", e)
             self.enabled = False
             self.es = None
     
@@ -113,7 +116,7 @@ class ObservabilityLogger:
             
         except Exception as e:
             # 로깅 실패해도 메인 로직에 영향 없도록
-            print(f"⚠️ Elasticsearch 로깅 실패: {e}")
+            log.warning("Elasticsearch 로깅 실패: %s", e)
     
     async def get_simple_queries(
         self,
@@ -152,7 +155,7 @@ class ObservabilityLogger:
             return [hit["_source"] for hit in result["hits"]["hits"]]
             
         except Exception as e:
-            print(f"⚠️ Elasticsearch 쿼리 실패: {e}")
+            log.warning("Elasticsearch 쿼리 실패: %s", e)
             return []
 
 

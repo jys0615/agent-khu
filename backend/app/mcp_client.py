@@ -7,8 +7,11 @@ from __future__ import annotations
 import os
 import sys
 import asyncio
+import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -61,10 +64,10 @@ class MCPClient:
 
         if root is None:
             root = candidates[-1]
-            print(f"⚠️ MCP 디렉터리를 찾지 못했습니다: {root}")
+            log.warning("MCP 디렉터리를 찾지 못했습니다: %s", root)
 
         self.mcp_dir = root
-        print(f"🔧 MCP_DIR = {self.mcp_dir}")
+        log.debug("MCP_DIR = %s", self.mcp_dir)
 
         # 기본 서버 경로 등록
         self._register_default_servers()
@@ -178,7 +181,7 @@ class MCPClient:
                     inner_errors = [str(ex) for ex in e.exceptions[:3]]  # 첫 3개만
                     error_msg = f"{error_msg} | Inner: {', '.join(inner_errors)}"
                 
-                print(f"❌ MCP Tool 호출 실패({attempt}/{retries+1}): {server_name}.{tool_name} - {error_type}: {error_msg}", flush=True)
+                log.error("MCP Tool 호출 실패(%s/%s): %s.%s - %s: %s", attempt, retries + 1, server_name, tool_name, error_type, error_msg)
                 
                 if attempt > retries:
                     raise Exception(f"MCP error after {retries+1} attempts: {error_type} - {error_msg}")
@@ -206,15 +209,15 @@ class MCPClient:
                     try:
                         import json
                         return json.loads(combined)
-                    except:
+                    except json.JSONDecodeError:
                         return combined
-            
+
             # content가 단일 객체인 경우
             if hasattr(result.content, 'text'):
                 try:
                     import json
                     return json.loads(result.content.text)
-                except:
+                except json.JSONDecodeError:
                     return result.content.text
         
         return result
@@ -224,7 +227,7 @@ class MCPClient:
         서버 종료 (실제로는 할 일 없음)
         각 call_tool에서 이미 context가 종료되었음
         """
-        print("🛑 MCP Client 종료")
+        log.info("MCP Client 종료")
 
     # Convenience wrappers for common servers/tools
     async def meal_get_today(self, meal_type: str = "lunch") -> Any:

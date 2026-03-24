@@ -8,9 +8,12 @@ Redis 기반 캐시 매니저
 import os
 import json
 import hashlib
+import logging
 from typing import Any, Optional, List
 from redis import asyncio as aioredis
 from redis.exceptions import RedisError
+
+log = logging.getLogger(__name__)
 
 
 class CacheManager:
@@ -38,10 +41,10 @@ class CacheManager:
             # 연결 테스트
             await self.redis.ping()
             self._connected = True
-            print(f"✅ Redis 연결 성공: {redis_url}")
+            log.info("Redis 연결 성공: %s", redis_url)
         except RedisError as e:
-            print(f"⚠️ Redis 연결 실패: {e}")
-            print("⚠️ 캐시 없이 계속 실행됩니다.")
+            log.warning("Redis 연결 실패: %s", e)
+            log.warning("캐시 없이 계속 실행됩니다.")
             self.redis = None
             self._connected = False
     
@@ -50,7 +53,7 @@ class CacheManager:
         if self.redis:
             await self.redis.close()
             self._connected = False
-            print("✅ Redis 연결 종료")
+            log.info("Redis 연결 종료")
     
     def _make_key(self, prefix: str, **kwargs) -> str:
         """캐시 키 생성 (일관된 해싱)"""
@@ -77,7 +80,7 @@ class CacheManager:
                 return json.loads(data)
             return None
         except (RedisError, json.JSONDecodeError) as e:
-            print(f"⚠️ 캐시 조회 실패 ({key}): {e}")
+            log.warning("캐시 조회 실패 (%s): %s", key, e)
             return None
     
     async def set(self, key: str, value: Any, ttl: int = 3600) -> bool:
@@ -90,7 +93,7 @@ class CacheManager:
             await self.redis.setex(key, ttl, serialized)
             return True
         except (RedisError, TypeError, ValueError) as e:
-            print(f"⚠️ 캐시 저장 실패 ({key}): {e}")
+            log.warning("캐시 저장 실패 (%s): %s", key, e)
             return False
     
     async def delete(self, key: str) -> bool:
@@ -102,7 +105,7 @@ class CacheManager:
             await self.redis.delete(key)
             return True
         except RedisError as e:
-            print(f"⚠️ 캐시 삭제 실패 ({key}): {e}")
+            log.warning("캐시 삭제 실패 (%s): %s", key, e)
             return False
     
     async def delete_pattern(self, pattern: str) -> int:
@@ -118,7 +121,7 @@ class CacheManager:
                 deleted += 1
             return deleted
         except RedisError as e:
-            print(f"⚠️ 패턴 삭제 실패 ({pattern}): {e}")
+            log.warning("패턴 삭제 실패 (%s): %s", pattern, e)
             return 0
     
     async def exists(self, key: str) -> bool:
@@ -152,7 +155,7 @@ class CacheManager:
                 keys.append(key)
             return keys
         except RedisError as e:
-            print(f"⚠️ 키 조회 실패 ({pattern}): {e}")
+            log.warning("키 조회 실패 (%s): %s", pattern, e)
             return []
     
     async def clear_all(self) -> bool:
@@ -162,10 +165,10 @@ class CacheManager:
         
         try:
             await self.redis.flushdb()
-            print("✅ 모든 캐시 삭제됨")
+            log.info("모든 캐시 삭제됨")
             return True
         except RedisError as e:
-            print(f"⚠️ 캐시 전체 삭제 실패: {e}")
+            log.warning("캐시 전체 삭제 실패: %s", e)
             return False
     
     async def get_info(self) -> dict:

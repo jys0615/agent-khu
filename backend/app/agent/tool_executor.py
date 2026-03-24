@@ -3,12 +3,15 @@ Tool 실행 핸들러 (캐싱 적용)
 """
 import json
 import hashlib
+import logging
 from typing import Optional, Any, Dict
 from ..mcp_client import mcp_client
 from .. import models
 from ..database import SessionLocal
 from ..cache import cache_manager
 from .tools_definition import CACHE_TTL
+
+log = logging.getLogger(__name__)
 
 
 async def process_tool_call(
@@ -69,7 +72,6 @@ async def process_tool_call(
                         courses_norm = sorted(map(str, courses))
                     except Exception:
                         courses_norm = []
-                    import hashlib
                     courses_hash = hashlib.md5(
                         json.dumps(courses_norm, ensure_ascii=False).encode("utf-8")
                     ).hexdigest()[:16]
@@ -89,10 +91,10 @@ async def process_tool_call(
             # 캐시 조회
             cached = await cache_manager.get(cache_key)
             if cached:
-                print(f"💾 Cache HIT: {tool_name}")
+                log.debug("Cache HIT: %s", tool_name)
                 return cached
             else:
-                print(f"🔍 Cache MISS: {tool_name}")
+                log.debug("Cache MISS: %s", tool_name)
         
         # Tool 실행
         if tool_name == "search_classroom":
@@ -153,12 +155,12 @@ async def process_tool_call(
         if cache_key and not result.get("error") and not result.get("needs_login"):
             ttl = CACHE_TTL.get(tool_name, 3600)
             await cache_manager.set(cache_key, result, ttl)
-            print(f"💾 Cache SAVE: {tool_name} (TTL: {ttl}s)")
-        
+            log.debug("Cache SAVE: %s (TTL: %ss)", tool_name, ttl)
+
         return result
-    
+
     except Exception as e:
-        print(f"❌ Tool 실행 에러: {e}")
+        log.error("Tool 실행 에러: %s", e)
         return {"error": str(e)}
 
 
@@ -267,17 +269,17 @@ async def _handle_get_latest_notices(tool_input: dict, current_user: Optional[mo
     
     # 먼저 크롤링 시도 (실패해도 계속 진행)
     try:
-        print(f"🔄 공지사항 크롤링 시도: {department}")
+        log.debug("공지사항 크롤링 시도: %s", department)
         crawl_result = await mcp_client.call_tool("notice", "crawl_fresh_notices", {
             "department": department,
             "limit": 20
         })
         if isinstance(crawl_result, dict) and crawl_result.get("crawled", 0) > 0:
-            print(f"✅ 크롤링 성공: {crawl_result.get('crawled')}개 수집")
+            log.info("크롤링 성공: %s개 수집", crawl_result.get("crawled"))
         else:
-            print(f"ℹ️ 크롤링 실패/신규 없음 - DB 기존 데이터 사용")
+            log.info("크롤링 실패/신규 없음 - DB 기존 데이터 사용")
     except Exception as e:
-        print(f"⚠️ 크롤링 예외 발생 (DB 데이터로 대체): {e}")
+        log.warning("크롤링 예외 발생 (DB 데이터로 대체): %s", e)
     
     # DB에서 조회
     result = await mcp_client.call_tool("notice", "get_latest_notices", {
@@ -331,6 +333,7 @@ async def _handle_search_courses(tool_input: dict):
         "department": department,
         "keyword": keyword
         }, timeout=10.0)
+    data = json.loads(result) if isinstance(result, str) else result
     return {"found": True, "courses": data.get("courses", [])}
 
 
@@ -407,20 +410,20 @@ async def _handle_get_requirements(tool_input: dict, current_user: Optional[mode
     if current_user:
         if not program:
             program = dept_map.get(current_user.department, "KHU-CSE")
-            print(f"✅ 사용자 학과({current_user.department}) → 프로그램({program})")
-        
+            log.info("사용자 학과(%s) -> 프로그램(%s)", current_user.department, program)
+
         if not year:
             year = str(current_user.admission_year)
-            print(f"✅ 사용자 입학년도({current_user.admission_year}) 적용")
-    
+            log.info("사용자 입학년도(%s) 적용", current_user.admission_year)
+
     # 기본값 설정 (사용자 미로그인 또는 학과 미매핑)
     if not program:
         program = "KHU-CSE"
     if not year:
         year = "latest"
-    
+
     try:
-        print(f"📞 MCP call: get_requirements(program={program}, year={year}, user={current_user.student_id if current_user else 'anonymous'})")
+        log.debug("MCP call: get_requirements(program=%s, year=%s, user=%s)", program, year, current_user.student_id if current_user else "anonymous")
         
         result = await mcp_client.call_tool(
             "curriculum",
@@ -440,11 +443,11 @@ async def _handle_get_requirements(tool_input: dict, current_user: Optional[mode
         if isinstance(data, dict) and data.get("error"):
             return {"found": False, "error": data}
         
-        print(f"✅ 졸업요건 조회 성공: {program} {year}학번")
+        log.info("졸업요건 조회 성공: %s %s학번", program, year)
         return {"found": True, "requirements": data}
-    
+
     except Exception as e:
-        print(f"❌ get_requirements 에러: {e}")
+        log.error("get_requirements 에러: %s", e)
         return {"found": False, "error": f"졸업요건 조회 실패: {str(e)}"}
 
 
@@ -474,11 +477,11 @@ async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[mod
     if current_user:
         if not program:
             program = dept_map.get(current_user.department, "KHU-CSE")
-            print(f"✅ 사용자 학과({current_user.department}) → 프로그램({program})")
+            log.info("사용자 학과(%s) -> 프로그램(%s)", current_user.department, program)
 
         if not year:
             year = str(current_user.admission_year)
-            print(f"✅ 사용자 입학년도({current_user.admission_year}) 적용")
+            log.info("사용자 입학년도(%s) 적용", current_user.admission_year)
 
     # 기본값 설정
     if not program:
@@ -487,7 +490,7 @@ async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[mod
         year = "latest"
 
     try:
-        print(f"📞 MCP call: evaluate_progress(program={program}, year={year}, courses={len(taken_courses)}개, user={current_user.student_id if current_user else 'anonymous'})")
+        log.debug("MCP call: evaluate_progress(program=%s, year=%s, courses=%s개, user=%s)", program, year, len(taken_courses), current_user.student_id if current_user else "anonymous")
         
         result = await mcp_client.call_tool(
             "curriculum",
@@ -507,11 +510,11 @@ async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[mod
         if isinstance(data, dict) and data.get("error"):
             return {"found": False, "error": data}
         
-        print(f"✅ 진행도 평가 완료: {program} {year}학번")
+        log.info("진행도 평가 완료: %s %s학번", program, year)
         return {"found": True, "evaluation": data}
-    
+
     except Exception as e:
-        print(f"❌ evaluate_progress 에러: {e}")
+        log.error("evaluate_progress 에러: %s", e)
         return {"found": False, "error": f"졸업요건 평가 실패: {str(e)}"}
 
 
@@ -546,7 +549,7 @@ async def _handle_get_seat_availability(tool_input: dict, library_username: Opti
                     library_username = cached.get("username")
                     library_password = cached.get("password")
         except Exception as e:
-            print(f"⚠️ library cred cache 조회 실패: {e}")
+            log.warning("library cred cache 조회 실패: %s", e)
 
     if not library_username or not library_password:
         return {"needs_login": True, "message": "도서관 로그인을 위해 학번과 비밀번호가 필요합니다."}
@@ -593,7 +596,7 @@ async def _handle_get_today_meal(tool_input: dict):
         }
         return {"meals": [meal_info]}
     except Exception as e:
-        print(f"❌ get_today_meal 에러: {e}")
+        log.error("get_today_meal 에러: %s", e)
         return {"meals": [], "error_message": f"학식 조회 중 오류: {str(e)}"}
 
 

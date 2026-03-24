@@ -1,33 +1,40 @@
 """
 Agent 메인 루프
 """
-import os
 import json
+import logging
 import time
-import asyncio  # ✅ 추가
-from typing import Optional, Dict, Any
+import asyncio
+from typing import Optional, Dict, Any, List
+from typing_extensions import TypedDict
 from sqlalchemy.orm import Session
 from anthropic import Anthropic
 from .. import models
+from ..config import get_settings
 from ..observability import obs_logger
 from ..question_classifier import classifier
 from .tools_definition import tools
 from .tool_executor import process_tool_call
 from .utils import detect_curriculum_intent, build_system_prompt
+from ..rag_agent import get_rag_agent
 
-# SLM Agent 조건부 import
-try:
-    from ..slm_agent import get_slm_agent
-    SLM_AVAILABLE = True
-except (ImportError, ModuleNotFoundError) as e:
-    print(f"⚠️ SLM Agent 사용 불가 (torch 미설치): {e}")
-    SLM_AVAILABLE = False
-    def get_slm_agent():
-        class DummySLM:
-            enabled = False
-        return DummySLM()
+log = logging.getLogger(__name__)
+client = Anthropic(api_key=get_settings().anthropic_api_key)
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+class AccumulatedResults(TypedDict):
+    classrooms: List[Dict]
+    notices: List[Dict]
+    map_links: List[str]
+    courses: List[Dict]
+    curriculum_courses: List[Dict]
+    requirements_result: Optional[Dict]
+    progress_result: Optional[Dict]
+    library_info: Optional[Dict]
+    library_seats: Optional[Dict]
+    reservation: Optional[Dict]
+    needs_library_login: bool
+    meal_result: Optional[Any]
 
 
 async def chat_with_claude_async(
@@ -40,7 +47,7 @@ async def chat_with_claude_async(
     current_user: Optional[models.User] = None
 ) -> Dict[str, Any]:
     """
-    Hybrid Agent: Simple → SLM, Complex → LLM (with Observability)
+    Hybrid Agent: Simple → RAG, Complex → LLM (with Observability)
     """
     # Observability 시작
     start_time = time.time()
@@ -48,39 +55,37 @@ async def chat_with_claude_async(
     mcp_tools_used = []
     routing_decision = "llm"  # 기본값
     
-    print(f"📊 Question Type: {question_type.upper()}")
-    print(f"📝 Classification: {classifier.get_classification_reason(message)}")
+    log.info("question_type=%s", question_type.upper())
+    log.debug("classification_reason=%s", classifier.get_classification_reason(message))
     
-    # 🆕 Simple 질문 → SLM 시도
+    # 🆕 Simple 질문 → RAG 시도 (LLM 호출 없이 직접 응답 → API 비용 절감)
     if question_type == "simple":
-        slm = get_slm_agent()
-        if slm.enabled:
-            print("🟢 SLM으로 처리 시도...")
-            slm_result = await slm.generate(message)
-            
-            if slm_result["success"] and slm_result["confidence"] >= 0.7:
-                print(f"✅ SLM 성공 (confidence: {slm_result['confidence']:.2f})")
-                routing_decision = "slm"
-                
-                # Observability 로깅
+        rag = get_rag_agent()
+        if rag.enabled:
+            rag_result = await rag.search(message)
+
+            if rag_result["found"] and rag_result["confidence"] >= 0.7:
+                routing_decision = "rag"
+
                 await obs_logger.log_interaction(
                     question=message,
                     user_id=current_user.student_id if current_user else "anonymous",
                     question_type=question_type,
                     routing_decision=routing_decision,
                     mcp_tools_used=[],
-                    response=slm_result["message"],
+                    response=rag_result["answer"],
                     latency_ms=int((time.time() - start_time) * 1000),
-                    success=True
+                    success=True,
+                    metadata={"rag_confidence": rag_result["confidence"],
+                              "rag_category": rag_result.get("category")},
                 )
-                
-                return {"message": slm_result["message"]}
+
+                return {"message": rag_result["answer"]}
             else:
-                print(f"⚠️ SLM 품질 낮음 (confidence: {slm_result.get('confidence', 0):.2f}), LLM Fallback")
                 routing_decision = "llm_fallback"
     
-    # 🔵 Complex 질문 또는 SLM 실패 → LLM 사용
-    print(f"🔵 LLM (Claude)으로 처리... (routing: {routing_decision})")
+    # 🔵 Complex 질문 또는 RAG 미매칭 → LLM 사용
+    log.info("LLM 처리 시작 (routing=%s)", routing_decision)
     
     try:
         # System prompt 생성
@@ -93,20 +98,11 @@ async def chat_with_claude_async(
         
         system_prompt = build_system_prompt(current_user, hint_text)
         
-        # 🔍 디버깅: 사용자 정보 및 시스템 프롬프트 확인
+        # 로그인 상태 확인 (개인정보 미노출)
         if current_user:
-            print(f"✅ 로그인 사용자:")
-            print(f"   └─ 학번: {current_user.student_id}")
-            print(f"   └─ 입학년도: {current_user.admission_year}년")
-            print(f"   └─ 학과: {current_user.department}")
-            print(f"   └─ 캠퍼스: {current_user.campus}")
-            print(f"   └─ 이수학점: {current_user.completed_credits or 0}/130")
-            print(f"   └─ [자동 적용] get_requirements, evaluate_progress 툴에서 사용됨")
+            log.debug("로그인 사용자 컨텍스트 적용 (dept=%s)", current_user.department)
         else:
-            print(f"⚠️  미로그인 상태 (current_user is None)")
-            print(f"   └─ 수동으로 program/year를 명시해야 함")
-        print(f"🔍 DEBUG - System Prompt 길이: {len(system_prompt)} chars")
-        print(f"🔍 DEBUG - System Prompt 앞부분:\n{system_prompt[:500]}...")
+            log.debug("미로그인 상태")
         
         messages = [{"role": "user", "content": message}]
         
@@ -114,7 +110,7 @@ async def chat_with_claude_async(
         max_iterations = 2
         iteration = 0
         
-        accumulated_results = {
+        accumulated_results: AccumulatedResults = {
             "classrooms": [],
             "notices": [],
             "map_links": [],
@@ -128,10 +124,10 @@ async def chat_with_claude_async(
             "needs_library_login": False,
             "meal_result": None,
         }
-        
+
         while iteration < max_iterations:
             iteration += 1
-            print(f"🤖 Agent Iteration {iteration}/{max_iterations}")
+            log.debug("Agent iteration %d/%d", iteration, max_iterations)
             
             # Claude API 호출
             response = client.messages.create(
@@ -147,19 +143,16 @@ async def chat_with_claude_async(
             if response.stop_reason == "tool_use":
                 tool_results = []
                 
-                print(f"🔍 DEBUG - Claude가 tool을 호출했습니다!")
-                
                 # Tool 호출 목록 수집
                 tool_calls = []
                 for content in response.content:
                     if content.type == "tool_use":
-                        print(f"  🔧 Tool 사용: {content.name}")
-                        print(f"  🔧 Tool 파라미터: {content.input}")
+                        log.debug("Tool 호출: %s", content.name)
                         mcp_tools_used.append(content.name)
                         tool_calls.append(content)
-                
+
                 # 🚀 순차 실행 (MCP stdio 안정성을 위해)
-                print(f"⚡ {len(tool_calls)}개 Tool 순차 실행 시작...")
+                log.debug("%d개 Tool 순차 실행 시작", len(tool_calls))
                 results = []
                 for tool in tool_calls:
                     result = await process_tool_call(
@@ -185,22 +178,20 @@ async def chat_with_claude_async(
                         "content": json.dumps(result, ensure_ascii=False)
                     })
                 
-                print(f"✅ 순차 실행 완료")
+                log.debug("Tool 순차 실행 완료")
                 
                 # 대화 이력 업데이트
                 messages.append({"role": "assistant", "content": response.content})
                 messages.append({"role": "user", "content": tool_results})
             
             elif response.stop_reason == "end_turn":
-                print("✅ Agent 작업 완료")
-                print(f"🔍 DEBUG - stop_reason: end_turn (tool 호출 안함)")
-                
+                log.info("Agent 작업 완료 (tools=%s)", mcp_tools_used)
+
                 # 최종 응답 추출
                 answer = ""
                 for content in response.content:
                     if content.type == "text":
                         answer += content.text
-                        print(f"🔍 DEBUG - Claude 답변: {answer[:200]}...")
                 
                 # 결과 구성
                 result = _build_final_result(answer, accumulated_results)
@@ -220,11 +211,11 @@ async def chat_with_claude_async(
                 return result
             
             else:
-                print(f"⚠️ Agent 종료: {response.stop_reason}")
+                log.warning("Agent 예상치 못한 종료: %s", response.stop_reason)
                 break
-        
+
         # 최대 반복 도달
-        print("⚠️ Agent 최대 반복 도달")
+        log.warning("Agent 최대 반복 횟수 도달 (%d)", max_iterations)
         
         answer = ""
         for content in response.content:
@@ -251,8 +242,8 @@ async def chat_with_claude_async(
         return result
     
     except Exception as e:
-        print(f"❌ Agent 에러: {e}")
-        
+        log.error("Agent 에러: %s", e)
+
         # ▼ Fallback: LLM 불가 시 직접 MCP 도구를 호출하여 응답 생성
         try:
             fb = await _fallback_direct_response(
@@ -276,7 +267,7 @@ async def chat_with_claude_async(
                 fb.pop("_mcp_tools_used", None)
                 return fb
         except Exception as fe:
-            print(f"⚠️ Fallback 실패: {fe}")
+            log.warning("Fallback 실패: %s", fe)
 
         # 에러 로깅 (최종)
         await obs_logger.log_interaction(
@@ -453,7 +444,7 @@ async def _fallback_direct_response(
     현재는 졸업요건 질의(requirements)에 대해 `get_requirements`만 처리한다.
     """
     hint = detect_curriculum_intent(message)
-    accumulated_results = {
+    accumulated_results: AccumulatedResults = {
         "classrooms": [],
         "notices": [],
         "map_links": [],
