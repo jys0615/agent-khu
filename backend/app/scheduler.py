@@ -183,7 +183,7 @@ def sync_weekly_meal():
         result = asyncio.run(scrape_weekly_meal(api_key))
         
         if result.get("success"):
-            print(f"  ✅ 주간 식단표 스크래핑 완료")
+            print("  ✅ 주간 식단표 스크래핑 완료")
             print(f"  📅 주간 시작: {result.get('week_start')}")
             print(f"  📦 캐시된 일수: {result.get('cached_days')}일")
         else:

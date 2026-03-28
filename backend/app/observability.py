@@ -3,12 +3,10 @@ Observability Logger for Agent KHU
 모든 사용자 상호작용을 Elasticsearch에 로깅하여 SLM 학습 데이터 수집
 """
 import logging
-from elasticsearch import Elasticsearch, AsyncElasticsearch
+from elasticsearch import AsyncElasticsearch
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-import json
 import os
-from contextlib import asynccontextmanager
 
 log = logging.getLogger(__name__)
 

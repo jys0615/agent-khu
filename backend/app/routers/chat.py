@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..agent import chat_with_claude_async
-from .. import schemas, crud, agent
+from .. import schemas, crud
 from ..database import get_db
 from typing import Optional
 from ..auth import get_current_user_optional

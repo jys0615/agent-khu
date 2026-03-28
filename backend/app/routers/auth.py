@@ -1,16 +1,14 @@
-from .. import schemas, crud, auth, models  # models 추가
-from ..database import get_db
-from ..cache import cache_manager
 """
 인증 관련 API
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
 
-from .. import schemas, crud, auth
+from .. import schemas, crud, auth, models
 from ..database import get_db
+from ..cache import cache_manager
+
 
 router = APIRouter(
     prefix="/api/auth",

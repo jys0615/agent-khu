@@ -76,8 +76,6 @@ class QuestionClassifier:
         Returns:
             "simple" or "complex"
         """
-        question_lower = question.lower()
-        
         # Simple 패턴 체크
         simple_count = 0
         for pattern in self.SIMPLE_PATTERNS:

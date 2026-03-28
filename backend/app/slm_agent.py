@@ -5,8 +5,6 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from typing import Optional, Dict, Any
 from pathlib import Path
-import os
-import json
 
 
 class SLMAgent:
@@ -32,7 +30,7 @@ class SLMAgent:
                 self.enabled = False
         else:
             print("⚠️ SLM 모델 없음 - LLM으로만 동작합니다")
-            print(f"   파인튜닝 실행: cd backend/scripts && python3 finetune_slm.py")
+            print("   파인튜닝 실행: cd backend/scripts && python3 finetune_slm.py")
             self.enabled = False
     
     def _find_latest_model(self) -> Optional[str]:

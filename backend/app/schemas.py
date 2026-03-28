@@ -1,12 +1,6 @@
+import json
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
-
-class ChatRequest(BaseModel):
-    message: str
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    library_username: Optional[str] = None  # 🆕 도서관 학번
-    library_password: Optional[str] = None  # 🆕 도서관 비밀번호
+from pydantic import BaseModel, validator
 
 class ClassroomInfo(BaseModel):
     code: str
@@ -94,10 +88,6 @@ class ChatResponse(BaseModel):
     evaluation: Optional[Dict[str, Any]] = None
     show_evaluation: bool = False
     curriculum_courses: Optional[List[Dict[str, Any]]] = None
-
-from pydantic import BaseModel, validator
-from typing import Optional, List
-import json
 
 # 회원가입 요청
 class UserRegister(BaseModel):

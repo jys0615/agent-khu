@@ -4,11 +4,10 @@
 import json
 import subprocess
 import os
-from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import schemas, crud, models
+from .. import crud, models
 from ..database import get_db
 
 router = APIRouter(

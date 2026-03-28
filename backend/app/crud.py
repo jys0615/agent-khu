@@ -1,10 +1,11 @@
 """
 데이터베이스 CRUD 작업
 """
-import re
+import json
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
-from . import models, schemas
+from . import models
 from typing import List, Optional
 from datetime import datetime
 
@@ -41,7 +42,7 @@ def get_classrooms(
     if floor:
         query = query.filter(models.Classroom.floor == floor)
     if accessible_only:
-        query = query.filter(models.Classroom.is_accessible == True)
+        query = query.filter(models.Classroom.is_accessible)
     
     return query.offset(skip).limit(limit).all()
 
@@ -79,7 +80,7 @@ def search_classrooms(
         search_codes.extend([with_prefix, with_prefix.upper()])
     
     # OR 조건으로 검색 + 우선순위 점수로 정렬
-    from sqlalchemy import or_, and_, case
+    from sqlalchemy import or_, case
     
     # 우선순위 점수 계산 (높을수록 우선)
     priority_score = case(
@@ -131,7 +132,7 @@ def get_latest_notices(
     limit: int = 10
 ) -> List[models.Notice]:
     """최신 공지사항 조회"""
-    query = db.query(models.Notice).filter(models.Notice.is_active == True)
+    query = db.query(models.Notice).filter(models.Notice.is_active)
     
     if source:
         query = query.filter(models.Notice.source == source)
@@ -149,7 +150,7 @@ def search_notices(
     
     return db.query(models.Notice).filter(
         and_(
-            models.Notice.is_active == True,
+            models.Notice.is_active,
             or_(
                 models.Notice.title.ilike(search_pattern),
                 models.Notice.content.ilike(search_pattern)
@@ -312,9 +313,6 @@ def bulk_create_courses(db: Session, courses_data: List[dict]):
     
     db.commit()
 
-
-import json
-from passlib.context import CryptContext
 
 # argon2 사용 (bcrypt 문제 회피)
 pwd_context = CryptContext(

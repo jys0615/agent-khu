@@ -11,10 +11,10 @@ import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-log = logging.getLogger(__name__)
-
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+log = logging.getLogger(__name__)
 
 
 class MCPClient:
@@ -136,7 +136,6 @@ class MCPClient:
             raise ValueError(f"등록되지 않은 MCP 서버: {server_name}")
 
         attempt = 0
-        last_error = None
         while True:
             try:
                 # 서버별 직렬화로 프로세스 스폰 경합 방지
@@ -172,7 +171,6 @@ class MCPClient:
             
             except Exception as e:
                 attempt += 1
-                last_error = e
                 error_type = type(e).__name__
                 error_msg = str(e)
                 
