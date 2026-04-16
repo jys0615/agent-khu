@@ -2,6 +2,7 @@
 
 > **AI Agent 기반** 경희대학교 캠퍼스 정보 통합 시스템
 
+[![CI](https://github.com/jys0615/agent-khu/actions/workflows/ci.yml/badge.svg)](https://github.com/jys0615/agent-khu/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-purple.svg)](https://modelcontextprotocol.io/)
@@ -155,10 +156,10 @@ Agent KHU:
          └───────────┬───────────┘
                      │
     ┌────────────────▼────────────────┐
-    │  Agent (agent.py)               │
+    │  Agent                          │
     │  - Claude Sonnet 4              │
     │  - Tool-Use Pattern             │
-    │  - 최대 5회 반복                   │
+    │  - 최대 2회 반복                   │
     └────────────────┬────────────────┘
                      │
          ┌───────────▼───────────┐
@@ -194,7 +195,7 @@ Agent KHU:
 4. 결과를 Claude에게 전달
     ↓
 5. Claude가 추가 Tool 필요 여부 판단
-    ├─ 필요하면 → 2번으로 (최대 5회)
+    ├─ 필요하면 → 2번으로 (최대 2회)
     └─ 불필요하면 → 최종 응답 생성
 ```
 
@@ -212,8 +213,13 @@ Agent KHU:
 - **[문제 해결](docs/TROUBLESHOOTING.md)** - 자주 발생하는 문제
 - **[배포 가이드](docs/DEPLOYMENT.md)** - 프로덕션 배포
 
-### 최근 변경 요약 (2025-12)
-- **Hybrid LLM/SLM 아키텍처**: Question Classifier로 질문 유형 자동 분류, Simple 질문은 SLM으로 라우팅하여 응답 속도 85% 개선
+### 최근 변경 요약 (2026-04)
+- **Agent 모듈 리팩토링**: 517줄 단일 파일(`agent_loop.py`)을 단일 책임 원칙에 따라 3개 모듈로 분리 — `agent_loop` (라우팅), `complex_handler` (LLM 루프), `result_builder` (응답 구성)
+- **CI/CD 파이프라인**: GitHub Actions 개선 (lint → test → build 순차 실행, 커버리지 리포트), CD 워크플로우 추가 (main 브랜치 푸시 시 GHCR 자동 배포)
+- **단위 테스트 추가**: `result_builder` 모듈 대상 20개 테스트 추가 — 외부 서비스 의존성 없이 CI에서 실행 가능
+
+### 변경 요약 (2025-12)
+- **Hybrid LLM/SLM 아키텍처**: Question Classifier로 질문 유형 자동 분류, Simple 질문은 RAG으로 라우팅하여 응답 속도 85% 개선
 - **Observability 시스템**: Elasticsearch 기반 로깅, 메트릭 수집, 학습 데이터 자동 수집
 - **Redis 캐싱 확대**: 2시간 TTL (공지사항, 교과과정), 1시간 TTL (학식), 성능 최대 80% 향상
 - **MCP 안정화**: 공식 MCP SDK 사용, 매 호출마다 세션 생성/종료로 Context 문제 완전 해결
@@ -267,6 +273,8 @@ Agent KHU:
 ### DevOps & Observability
 - **[Docker](https://www.docker.com/)** - 컨테이너화
 - **[Docker Compose](https://docs.docker.com/compose/)** - 오케스트레이션
+- **[GitHub Actions](https://github.com/features/actions)** - CI (lint → test → build) / CD (GHCR 이미지 배포)
+- **[GitHub Container Registry](https://ghcr.io)** - Docker 이미지 레지스트리
 - **APScheduler** - 백그라운드 작업 스케줄링
 - **Elasticsearch** - 로그 수집 및 분석
 
@@ -280,16 +288,18 @@ agent-khu/
 │   ├── app/
 │   │   ├── main.py            # 진입점 (Lifespan, CORS, 라우터)
 │   │   ├── agent/             # AI Agent 모듈
-│   │   │   ├── agent_loop.py  # Agent 메인 루프 (Hybrid LLM/SLM)
-│   │   │   ├── tool_executor.py  # Tool 실행 로직
-│   │   │   ├── tools_definition.py  # Tool 스키마 정의
-│   │   │   └── utils.py       # Curriculum intent 감지
+│   │   │   ├── agent_loop.py     # 라우팅 오케스트레이터 (Simple/Complex)
+│   │   │   ├── complex_handler.py # Claude Tool-Use 루프 + Fallback
+│   │   │   ├── result_builder.py  # Tool 결과 누적 및 응답 구성
+│   │   │   ├── tool_executor.py   # MCP Tool 호출 및 캐싱
+│   │   │   ├── tools_definition.py # Tool 스키마 정의
+│   │   │   └── utils.py          # Curriculum intent 감지
 │   │   ├── mcp_client.py      # MCP 클라이언트 (공식 SDK)
 │   │   ├── mcp_manager.py     # MCP 관리자
 │   │   ├── cache.py           # Redis 캐시 매니저
 │   │   ├── observability.py   # Elasticsearch 로깅
 │   │   ├── question_classifier.py  # 질문 분류기
-│   │   ├── slm_agent.py       # SLM Agent (선택)
+│   │   ├── rag_agent.py       # RAG Agent (Elasticsearch BM25)
 │   │   ├── scheduler.py       # 백그라운드 스케줄러
 │   │   ├── auth.py            # JWT 인증
 │   │   ├── models.py          # DB 모델
