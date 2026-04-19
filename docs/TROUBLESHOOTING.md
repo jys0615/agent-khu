@@ -249,6 +249,27 @@ alembic upgrade head
 
 ---
 
+## 백엔드 컨테이너 시작 실패 (init_db.py)
+
+**증상**:
+```
+ModuleNotFoundError: No module named 'parse_rooms'
+```
+컨테이너가 `Exited (1)` 상태로 바로 종료됨
+
+**원인**: `init_db.py`가 `parse_rooms` 모듈을 현재 디렉토리에서 찾지만, 실제 파일은 `scripts/migrations/parse_rooms.py`에 있음
+
+**해결**: 이미 수정됨 (`init_db.py`가 `scripts/migrations/` 경로를 sys.path에 추가). 동일 증상 재발 시:
+```bash
+# 파일 위치 확인
+find backend/ -name "parse_rooms.py"
+
+# init_db.py의 sys.path 확인
+head -15 backend/init_db.py
+```
+
+---
+
 ## MCP 서버 문제
 
 ### MCP 서버 시작 실패
@@ -317,6 +338,46 @@ def _readline():
         print(f"[ERROR] JSON parse error: {e}", file=sys.stderr)
         return None
 ```
+
+---
+
+### classroom MCP 첫 호출 실패 (TCPTransport closed)
+
+**증상**:
+```
+Tool 실행 에러: unable to perform operation on <TCPTransport closed=True>; the handler is closed
+```
+"성무진 교수님 연구실" 등 강의실 검색 시 "시설 검색 시스템에 일시적인 문제" 응답
+
+**원인**: classroom MCP 서버가 처음 시작할 때 DB 연결 초기화 시간이 길어 MCP 세션 타임아웃 발생 (콜드스타트 문제)
+
+**해결**: 이미 수정됨 — 서버 시작 시 `main.py`에서 classroom MCP를 미리 워밍업함. 동일 증상 재발 시:
+```bash
+# 백엔드 로그에서 워밍업 확인
+docker logs agent-khu-backend 2>&1 | grep "워밍업"
+# 정상: "MCP 워밍업: classroom.search_classroom 완료"
+
+# 워밍업 없으면 백엔드 재시작
+docker restart agent-khu-backend
+```
+
+---
+
+### 도서관 좌석 스케줄러 크래시
+
+**증상**:
+```
+❌ 도서관 크롤링 에러: app.models.LibrarySeat() argument after ** must be a mapping, not str
+```
+백그라운드 도서관 좌석 자동 크롤링이 10분마다 실패
+
+**원인**: 스크래퍼가 `{"seats": [...], "success": bool}` dict를 반환하는데, 스케줄러가 dict 자체를 리스트처럼 순회해 string 키가 `**` 언패킹에 들어감
+
+**해결**: 이미 수정됨 — `scheduler.py`의 `sync_library_seats()`에서 `data.get("seats", [])` 로 추출. 단, KHU 도서관 사이트 SSL 인증서 문제(`ERR_CERT_COMMON_NAME_INVALID`)로 실시간 크롤링 자체는 외부 이슈:
+```
+⚠️ 도서관 좌석 업데이트 건너뜀: 좌석 현황을 불러오지 못했습니다.
+```
+이 메시지는 에러가 아닌 정상 처리 결과임 (사용자 직접 질의 시에는 별도 경로로 처리)
 
 ---
 

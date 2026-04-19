@@ -217,6 +217,7 @@ Agent KHU:
 - **Agent 모듈 리팩토링**: 517줄 단일 파일(`agent_loop.py`)을 단일 책임 원칙에 따라 3개 모듈로 분리 — `agent_loop` (라우팅), `complex_handler` (LLM 루프), `result_builder` (응답 구성)
 - **CI/CD 파이프라인**: GitHub Actions 개선 (lint → test → build 순차 실행, 커버리지 리포트), CD 워크플로우 추가 (main 브랜치 푸시 시 GHCR 자동 배포)
 - **단위 테스트 추가**: `result_builder` 모듈 대상 20개 테스트 추가 — 외부 서비스 의존성 없이 CI에서 실행 가능
+- **버그 수정**: 도서관 스케줄러 파싱 크래시 수정, `warm_cache` asyncio 이벤트 루프 충돌 수정, classroom MCP 콜드스타트 실패 수정 (서버 시작 시 워밍업 추가)
 
 ### 변경 요약 (2025-12)
 - **Hybrid LLM/SLM 아키텍처**: Question Classifier로 질문 유형 자동 분류, Simple 질문은 RAG으로 라우팅하여 응답 속도 85% 개선
