@@ -89,7 +89,7 @@ def sync_library_seats():
     """도서관 좌석 동기화"""
     print("🔄 도서관 좌석 자동 크롤링 시작...")
     db = SessionLocal()
-    
+
     try:
         result = subprocess.run(
             ["python3", LIBRARY_SCRAPER],
@@ -97,12 +97,18 @@ def sync_library_seats():
             text=True,
             timeout=30
         )
-        
+
         if result.returncode == 0:
-            seats = json.loads(result.stdout)
-            crud.update_library_seats(db, seats)
-            print(f"✅ 도서관 좌석: {len(seats)}개 업데이트")
-        
+            data = json.loads(result.stdout)
+            # 스크래퍼는 {"seats": [...], "success": bool, ...} 형태를 반환
+            seats = data.get("seats", []) if isinstance(data, dict) else data
+            if seats:
+                crud.update_library_seats(db, seats)
+                print(f"✅ 도서관 좌석: {len(seats)}개 업데이트")
+            else:
+                msg = data.get("message", "좌석 정보 없음") if isinstance(data, dict) else "좌석 정보 없음"
+                print(f"⚠️ 도서관 좌석 업데이트 건너뜀: {msg}")
+
     except Exception as e:
         print(f"❌ 도서관 크롤링 에러: {e}")
     finally:
@@ -211,50 +217,31 @@ def shutdown_scheduler():
 # scheduler.py 맨 아래에 추가 (shutdown_scheduler 함수 뒤)
 
 def warm_cache():
-    """캐시 워밍업 - 자주 쓰는 데이터 미리 로드"""
-    print("🔥 캐시 워밍업 시작...")
-    
+    """Redis 연결 상태 확인
+
+    MCP 툴 캐싱은 main.py 워밍업(curriculum, classroom)과
+    tool_executor 레이어(첫 호출 후 자동 캐시)가 담당한다.
+    APScheduler 스레드에서 subprocess를 생성하면 uvicorn 메인 루프와
+    충돌(Racing with another loop)하므로 MCP 호출을 여기서 하지 않는다.
+    """
+    print("🔥 캐시 연결 확인...")
+
+    import asyncio
+    from .cache import cache_manager
+
+    async def _check():
+        await cache_manager.connect()
+        print("  ✅ Redis 연결 확인")
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        from .mcp_client import mcp_client
-        from .cache import cache_manager
-        import asyncio
-        
-        async def _warm():
-            await cache_manager.connect()
-            
-            # 1. 오늘 학식 메뉴 (가장 많이 조회)
-            try:
-                meal = await mcp_client.call_tool("meal", "get_today_meal", {"meal_type": "lunch"})
-                cache_key = "tool:get_today_meal:{\"meal_type\":\"lunch\"}"
-                await cache_manager.set(cache_key, {"meals": [meal]}, 3600)
-                print("  ✅ 학식 메뉴 캐시")
-            except Exception as e:
-                print(f"  ⚠️ 학식 메뉴 캐시 워밍업 실패: {e}")
-
-            # 2. 도서관 기본 정보
-            try:
-                lib_info = await mcp_client.call_tool("library", "get_library_info", {"campus": "global"})
-                cache_key = "tool:get_library_info:{\"campus\":\"global\"}"
-                await cache_manager.set(cache_key, {"library_info": lib_info}, 3600)
-                print("  ✅ 도서관 정보 캐시")
-            except Exception as e:
-                print(f"  ⚠️ 도서관 정보 캐시 워밍업 실패: {e}")
-
-            # 3. 최신 졸업요건 (KHU-CSE)
-            try:
-                req = await mcp_client.call_tool("curriculum", "get_requirements", {"program": "KHU-CSE", "year": "latest"})
-                cache_key = "tool:get_requirements:{\"program\":\"KHU-CSE\",\"year\":\"latest\"}"
-                await cache_manager.set(cache_key, {"found": True, "requirements": req}, 86400)
-                print("  ✅ 졸업요건 캐시")
-            except Exception as e:
-                print(f"  ⚠️ 졸업요건 캐시 워밍업 실패: {e}")
-            
-            print("✅ 캐시 워밍업 완료")
-        
-        asyncio.run(_warm())
-        
+        loop.run_until_complete(_check())
     except Exception as e:
-        print(f"⚠️ 캐시 워밍업 실패: {e}")
+        print(f"⚠️ 캐시 확인 실패: {e}")
+    finally:
+        loop.close()
+        asyncio.set_event_loop(None)
 
 
 # 전역 스케줄러 인스턴스 — shutdown_scheduler에서 참조

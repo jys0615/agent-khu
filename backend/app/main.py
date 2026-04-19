@@ -66,18 +66,30 @@ async def lifespan(app: FastAPI):
     try:
         import asyncio as _asyncio
 
-        async def _warmup_curriculum():
+        async def _warmup():
+            # curriculum — 졸업요건 조회 빈도가 높음
             try:
                 await mcp_client.call_tool(
                     "curriculum", "get_requirements",
                     {"program": "KHU-CSE", "year": "latest"},
-                    timeout=10.0, retries=1,
+                    timeout=15.0, retries=1,
                 )
                 log.info("MCP 워밍업: curriculum.get_requirements 완료")
             except Exception as _e:
-                log.debug("MCP 워밍업 스킵 (무시 가능): %s", _e)
+                log.debug("MCP 워밍업 스킵 (curriculum): %s", _e)
 
-        _asyncio.create_task(_warmup_curriculum())
+            # classroom — 첫 호출 시 DB 연결 초기화로 콜드스타트 길어짐
+            try:
+                await mcp_client.call_tool(
+                    "classroom", "search_classroom",
+                    {"query": "전101"},
+                    timeout=30.0, retries=0,
+                )
+                log.info("MCP 워밍업: classroom.search_classroom 완료")
+            except Exception as _e:
+                log.debug("MCP 워밍업 스킵 (classroom): %s", _e)
+
+        _asyncio.create_task(_warmup())
     except Exception as e:
         log.debug("MCP 워밍업 태스크 생성 실패 (무시 가능): %s", e)
 
