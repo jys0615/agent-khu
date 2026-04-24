@@ -70,13 +70,33 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # job-level if 에서는 secrets 컨텍스트를 쓸 수 없으므로
+  # 별도 check 잡에서 출력값으로 전달
+  check-deploy:
+    name: Check deploy conditions
+    runs-on: ubuntu-latest
+    needs: publish
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Check KUBECONFIG secret
+        id: check
+        env:
+          KUBECONFIG_VAL: ${{ secrets.KUBECONFIG }}
+        run: |
+          if [ -n "$KUBECONFIG_VAL" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "⚠️  KUBECONFIG secret not set — skipping K8s deploy"
+          fi
+
   deploy:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
-    needs: publish
+    needs: check-deploy
     timeout-minutes: 15
-    # Only runs when KUBECONFIG secret is configured
-    if: ${{ secrets.KUBECONFIG != '' }}
+    if: needs.check-deploy.outputs.should_deploy == 'true'
 
     steps:
       - uses: actions/checkout@v4
