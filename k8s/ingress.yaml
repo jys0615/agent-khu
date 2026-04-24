@@ -9,8 +9,6 @@ metadata:
     # SSE requires buffering off
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-cache: "off"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header X-Accel-Buffering "no";
     nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   ingressClassName: nginx

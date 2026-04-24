@@ -5,7 +5,6 @@ interface MapButtonProps {
 }
 
 // 기본 목적지(폴백) — 서버에서 mapLink가 없을 때 사용
-const DEST_NAME = '경희대학교 국제캠퍼스';
 const DEST_LAT = 37.2439;
 const DEST_LNG = 127.0785;
 
