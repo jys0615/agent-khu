@@ -6,7 +6,7 @@ import logging
 import asyncio
 from typing import Optional, Dict, Any, List, Tuple
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 from .. import models
 from ..config import get_settings
 from .tools_definition import tools
@@ -21,7 +21,7 @@ from .result_builder import (
 
 log = logging.getLogger(__name__)
 
-_client = Anthropic(api_key=get_settings().anthropic_api_key)
+_client = AsyncAnthropic(api_key=get_settings().anthropic_api_key)
 _MODEL = "claude-sonnet-4-20250514"
 _MAX_ITERATIONS = 2
 
@@ -51,7 +51,7 @@ async def run_llm_agent(
     for iteration in range(1, _MAX_ITERATIONS + 1):
         log.debug("Agent iteration %d/%d", iteration, _MAX_ITERATIONS)
 
-        response = _client.messages.create(
+        response = await _client.messages.create(
             model=_MODEL,
             max_tokens=2048,
             system=system_prompt,
@@ -140,28 +140,38 @@ async def _execute_tools(
     library_username, library_password,
     current_user,
 ) -> Tuple[List[Dict], List[str]]:
-    """Tool 호출 목록을 순차 실행하고 대화 이력을 갱신한다."""
+    """Tool 호출 목록을 병렬 실행하고 대화 이력을 갱신한다."""
     tool_calls = [c for c in response.content if c.type == "tool_use"]
-    log.debug("%d개 Tool 순차 실행", len(tool_calls))
+    log.debug("%d개 Tool 병렬 실행", len(tool_calls))
 
-    tool_results = []
     for tool in tool_calls:
-        log.debug("Tool 호출: %s", tool.name)
         tools_used.append(tool.name)
 
-        result = await process_tool_call(
-            tool.name, tool.input,
-            user_latitude, user_longitude,
-            library_username, library_password,
-            current_user,
-        )
+    # 모든 tool을 동시에 실행 — 영구 세션 풀(Phase 1) 덕분에 경합 없음
+    raw_results = await asyncio.gather(
+        *[
+            process_tool_call(
+                tool.name, tool.input,
+                user_latitude, user_longitude,
+                library_username, library_password,
+                current_user,
+            )
+            for tool in tool_calls
+        ],
+        return_exceptions=True,
+    )
+
+    tool_results = []
+    for tool, result in zip(tool_calls, raw_results):
+        if isinstance(result, Exception):
+            log.error("Tool 실행 예외 (%s): %s", tool.name, result)
+            result = {"error": str(result)}
         accumulate_results(accumulated, tool.name, result)
         tool_results.append({
             "type": "tool_result",
             "tool_use_id": tool.id,
             "content": json.dumps(result, ensure_ascii=False),
         })
-        await asyncio.sleep(0.1)  # MCP stdio 안정성 확보
 
     messages.append({"role": "assistant", "content": response.content})
     messages.append({"role": "user", "content": tool_results})

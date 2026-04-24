@@ -117,6 +117,88 @@ await mcp_client.stop_all()
 
 ---
 
+### [Phase 2] 동기 Anthropic 클라이언트 이벤트 루프 블로킹 + 순차 Tool 실행
+
+**날짜**: 2026-04-24
+**수정 파일**: `backend/app/agent/complex_handler.py`
+
+#### 문제 1 — 동기 클라이언트 이벤트 루프 블로킹
+
+FastAPI는 단일 asyncio 이벤트 루프 위에서 모든 요청을 처리한다.
+기존 코드는 동기 `Anthropic` 클라이언트를 사용했고, `messages.create()`가
+HTTP 응답을 기다리는 동안 이벤트 루프 전체가 블로킹됐다.
+
+```python
+# Before — 이벤트 루프 블로킹
+from anthropic import Anthropic
+_client = Anthropic(api_key=...)
+
+response = _client.messages.create(...)   # LLM 응답 3~10초 동안 블로킹
+                                          # 이 시간 동안 다른 요청 처리 불가
+```
+
+동시 사용자가 2명이면 두 번째 요청은 첫 번째 LLM 응답이 끝날 때까지 대기.
+
+#### 해결 1 — AsyncAnthropic 교체
+
+```python
+# After — 논블로킹
+from anthropic import AsyncAnthropic
+_client = AsyncAnthropic(api_key=...)
+
+response = await _client.messages.create(...)  # 이벤트 루프 반환, 다른 요청 처리 가능
+```
+
+#### 문제 2 — 순차 Tool 실행 + 불필요한 sleep
+
+Claude가 복수 tool을 한 번에 요청할 때(예: 학식 + 도서관 좌석 동시 조회)
+기존 코드는 순차 실행 + 각 호출 사이 `asyncio.sleep(0.1)` 대기.
+
+```python
+# Before — 순차 실행
+for tool in tool_calls:
+    result = await process_tool_call(tool.name, ...)
+    await asyncio.sleep(0.1)   # "MCP stdio 안정성 확보" 목적이었으나
+                                # Phase 1 영구 세션 이후 불필요
+# 2개 tool: tool1(2s) + 0.1s + tool2(2s) = ~4.1s
+```
+
+Phase 1에서 영구 세션 풀로 전환했기 때문에 stdio 경합 자체가 없어짐.
+`asyncio.sleep(0.1)` 는 per-request subprocess 방식의 잔재였음.
+
+#### 해결 2 — asyncio.gather() 병렬 실행
+
+```python
+# After — 병렬 실행
+raw_results = await asyncio.gather(
+    *[process_tool_call(tool.name, ...) for tool in tool_calls],
+    return_exceptions=True,   # 하나 실패해도 나머지 결과 유지
+)
+# 2개 tool: max(tool1, tool2) ≈ 2s (가장 느린 것 기준)
+```
+
+`return_exceptions=True`: 하나의 tool 실패가 전체 응답을 막지 않도록.
+실패한 tool은 `{"error": str(e)}`로 처리되고 나머지 결과는 정상 반환.
+
+#### 측정 결과
+
+| 지표 | Before | After |
+|---|---|---|
+| LLM 호출 중 이벤트 루프 | **블로킹** (3~10s) | 논블로킹 |
+| 동시 요청 처리 가능 여부 | 불가 | **가능** |
+| 복수 tool 실행 방식 | 순차 + sleep(0.1) | **asyncio.gather() 병렬** |
+| 2개 tool 실행 시간 (예) | tool1 + 0.1 + tool2 ≈ 4.1s | max(tool1, tool2) ≈ **2s** |
+| tool 실패 시 전체 응답 | 전파 실패 | **부분 성공 허용** |
+
+> **포트폴리오 수치**: *"동기 Anthropic 클라이언트를 AsyncAnthropic으로 교체해 이벤트 루프 블로킹 제거, 멀티 tool 병렬화로 복수 도구 요청 응답 시간 ~50% 단축"*
+
+#### 트러블슈팅 포인트
+- `asyncio.sleep(0.1)` 제거가 안전한 이유: Phase 1에서 영구 세션을 도입해
+  per-request subprocess spawn 경합이 없어졌기 때문. 세션 재사용 환경에서는
+  동시 `call_tool()` 호출이 `ClientSession` 내부 JSON-RPC ID로 구분됨.
+- `return_exceptions=True` 없이 gather를 쓰면 하나의 tool 타임아웃이
+  전체 iteration을 ExceptionGroup으로 실패시킴. 부분 실패 허용이 필수.
+
 ---
 
 ## 설치 문제

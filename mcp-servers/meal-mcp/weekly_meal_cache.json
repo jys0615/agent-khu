@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-04-24T01:23:23.856441",
+  "created_at": "2026-04-24T01:27:29.658884",
   "week_start": "2026-04-20",
   "weekly_data": {
     "2026-04-20": {
@@ -7,16 +7,16 @@
         "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "lunch",
-        "menu": "미트볼하이라이스",
-        "price": 6000,
+        "menu": "미트볼카레돈까스",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "dinner",
-        "menu": "차이나짜장덮밥",
-        "price": 6000,
+        "menu": "코지마늘돈육",
+        "price": 5000,
         "available": true
       }
     },
@@ -25,16 +25,16 @@
         "date": "2026-04-21",
         "day": "화요일",
         "meal_type": "lunch",
-        "menu": "달안육개장",
-        "price": 6000,
+        "menu": "달콤닭",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-21",
         "day": "화요일",
         "meal_type": "dinner",
-        "menu": "매콤달콤순살닭볶음",
-        "price": 6000,
+        "menu": "청양돈돈우동",
+        "price": 5000,
         "available": true
       }
     },
@@ -43,16 +43,16 @@
         "date": "2026-04-22",
         "day": "수요일",
         "meal_type": "lunch",
-        "menu": "단지치킨덮밥",
-        "price": 6000,
+        "menu": "감자치즈돈까스",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-22",
         "day": "수요일",
         "meal_type": "dinner",
-        "menu": "돈육스태이크필라프",
-        "price": 6000,
+        "menu": "소보로카레라이스",
+        "price": 5000,
         "available": true
       }
     },
@@ -61,16 +61,16 @@
         "date": "2026-04-23",
         "day": "목요일",
         "meal_type": "lunch",
-        "menu": "돈육강정덮밥",
-        "price": 6000,
+        "menu": "삼계해장라면",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-23",
         "day": "목요일",
         "meal_type": "dinner",
-        "menu": "세우튀김우동",
-        "price": 6000,
+        "menu": "훈제오리필라프",
+        "price": 5000,
         "available": true
       }
     },
@@ -79,16 +79,16 @@
         "date": "2026-04-24",
         "day": "금요일",
         "meal_type": "lunch",
-        "menu": "소보로크림빵버거",
-        "price": 6000,
+        "menu": "소보로큐브비빔밥",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-24",
         "day": "금요일",
         "meal_type": "dinner",
-        "menu": "누룽지수제갈비만두탕",
-        "price": 6000,
+        "menu": "부깐풍돈육&수제볶음밥",
+        "price": 5000,
         "available": true
       }
     }
