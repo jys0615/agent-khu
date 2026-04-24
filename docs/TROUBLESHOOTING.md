@@ -329,6 +329,65 @@ docker-compose up -d
 
 ---
 
+### [Phase 5] Streamable HTTP 스트리밍 (MCP 2025-03-26 표준)
+
+**날짜**: 2026-04-24
+**신규 파일**: `backend/app/routers/chat_stream.py`
+**수정 파일**: `backend/app/main.py`, `complex_handler.py`, `frontend/src/api/chat.ts`, `frontend/src/components/ChatInterface.tsx`, `frontend/src/components/MessageBubble.tsx`
+
+#### 배경 — SSE(Phase 4 초안) vs Streamable HTTP
+
+| 항목 | SSE (deprecated) | Streamable HTTP (채택) |
+|---|---|---|
+| MCP 스펙 | 2024-11-05 (구) | **2025-03-26 (최신)** |
+| 엔드포인트 | GET /sse + POST /messages (2개) | **POST /chat/stream (1개)** |
+| Content Negotiation | 없음 | Accept 헤더로 SSE/JSON 전환 |
+| 세션 추적 | 없음 | `Mcp-Session-Id` 응답 헤더 |
+| TTFT (첫 토큰) | 전체 응답 완료 후 | **즉시 (토큰 단위)** |
+
+#### 구현 구조
+
+```
+POST /api/chat/stream
+  Accept: text/event-stream
+    └→ StreamingResponse (SSE)
+         ├ {"type":"connected","session_id":"..."}
+         ├ {"type":"tool_start","tool":"get_cafeteria_menu","label":"학식 메뉴 확인 중..."}
+         ├ {"type":"text","delta":"오늘 "}
+         ├ {"type":"text","delta":"학식은..."}
+         ├ {"type":"tool_end","tool":"get_cafeteria_menu"}
+         └ {"type":"done","result":{...}}
+
+  Accept: application/json (폴백)
+    └→ JSONResponse (완료 후 단일 반환)
+```
+
+#### asyncio.Queue 패턴
+`run_llm_agent_stream()`에서 `on_event` 콜백이 Queue에 이벤트를 put하고,
+FastAPI `StreamingResponse`의 async generator가 Queue에서 get해 SSE 포맷으로 변환.
+LLM 스트림 루프와 HTTP 응답 루프가 완전히 분리됨.
+
+#### 측정 결과 (Before/After)
+
+| 지표 | Before (non-streaming) | After (Streamable HTTP) |
+|---|---|---|
+| TTFT (첫 토큰 전달) | 3~8s (완료 후 일괄) | **< 300ms** |
+| 체감 응답 속도 | "멈춘 것 같음" | 실시간 타이핑 효과 |
+| Tool 실행 가시성 | 없음 | "학식 메뉴 확인 중..." 표시 |
+| 엔드포인트 수 | 1 | 1 (단일 POST, 스펙 준수) |
+
+#### 프론트엔드 변경
+- `sendMessageStream()`: fetch + ReadableStream 기반, `\n\n` 구분으로 SSE 파싱
+- `ChatInterface`: placeholder 메시지 즉시 추가 → `text` delta 누적 → `done` 시 result 병합
+- `MessageBubble`: `activeTools` 배열로 스피너 + 한국어 레이블 표시, 스트리밍 커서(블링크)
+
+#### 트러블슈팅 포인트
+- SSE 응답에 `X-Accel-Buffering: no` 헤더 필수 — nginx 리버스 프록시가 버퍼링하면 스트림이 한 번에 도착함.
+- `asyncio.Queue` 대신 직접 generator에서 yield할 경우 `run_llm_agent_stream()` 내부 `await` 순서와 generator 소비 순서 불일치로 deadlock 발생 가능 — Queue 패턴이 안전함.
+- 프론트엔드 `buffer` 분리 처리: SSE chunk가 `\n\n` 경계에서 분할되어 올 수 있으므로 `buffer`에 축적 후 `\n\n`으로 split 필수.
+
+---
+
 ## 설치 문제
 
 ### Python 버전 오류

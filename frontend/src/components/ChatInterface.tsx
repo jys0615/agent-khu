@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendMessage } from '../api/chat';
+import { sendMessageStream } from '../api/chat';
 import MessageBubble from './MessageBubble';
 // MapButton is rendered inside MessageBubble; no direct use here.
 
@@ -7,6 +7,8 @@ interface Message {
     id: string;
     text: string;
     isUser: boolean;
+    isStreaming?: boolean;
+    activeTools?: string[];    // 현재 실행 중인 tool 라벨 목록
     timestamp?: string;
     classroomInfo?: any;
     mapLink?: string;
@@ -100,10 +102,8 @@ const ChatInterface: React.FC = () => {
 
         if (!messageToSend.trim()) return;
 
-        // 환영 메시지 숨김
         setShowWelcome(false);
 
-        // 로그인 폼 전송이 아닌 경우에만 사용자 메시지 추가
         if (!withCredentials) {
             const userMessage: Message = {
                 id: Date.now().toString(),
@@ -117,73 +117,116 @@ const ChatInterface: React.FC = () => {
 
         setIsLoading(true);
 
+        // 스트리밍 placeholder 메시지
+        const aiMsgId = (Date.now() + 1).toString();
+        setMessages((prev) => [
+            ...prev,
+            { id: aiMsgId, text: '', isUser: false, isStreaming: true, activeTools: [] },
+        ]);
+
         try {
-            const response = await sendMessage(
+            await sendMessageStream(
                 messageToSend,
+                (event) => {
+                    if (event.type === 'text') {
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === aiMsgId ? { ...m, text: m.text + event.delta } : m,
+                            ),
+                        );
+                    } else if (event.type === 'tool_start') {
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === aiMsgId
+                                    ? { ...m, activeTools: [...(m.activeTools ?? []), event.label] }
+                                    : m,
+                            ),
+                        );
+                    } else if (event.type === 'tool_end') {
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === aiMsgId
+                                    ? { ...m, activeTools: (m.activeTools ?? []).slice(1) }
+                                    : m,
+                            ),
+                        );
+                    } else if (event.type === 'done') {
+                        const r = event.result as any;
+                        if (
+                            typeof r.message === 'string' &&
+                            r.message.includes('학번') &&
+                            r.message.includes('비밀번호') &&
+                            !withCredentials
+                        ) {
+                            setShowLibraryLogin(true);
+                            setPendingLibraryMessage(messageToSend);
+                            setMessages((prev) =>
+                                prev.map((m) =>
+                                    m.id === aiMsgId
+                                        ? { ...m, text: r.message, isStreaming: false, activeTools: [], needs_library_login: true, pending_message: messageToSend }
+                                        : m,
+                                ),
+                            );
+                            return;
+                        }
+                        if (withCredentials) {
+                            setShowLibraryLogin(false);
+                            setLibraryCredentials({ username: '', password: '' });
+                            setPendingLibraryMessage('');
+                        }
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === aiMsgId
+                                    ? {
+                                          ...m,
+                                          text: r.message ?? m.text,
+                                          isStreaming: false,
+                                          activeTools: [],
+                                          timestamp: new Date().toISOString(),
+                                          classroomInfo: r.classroom,
+                                          mapLink: r.map_link,
+                                          showMapButton: r.show_map_button,
+                                          notices: r.notices,
+                                          meals: r.meals,
+                                          seats: r.seats,
+                                          requirements: r.requirements,
+                                          show_requirements: r.show_requirements,
+                                          evaluation: r.evaluation,
+                                          show_evaluation: r.show_evaluation,
+                                          library_info: r.library_info,
+                                          show_library_info: r.show_library_info,
+                                          library_seats: r.library_seats,
+                                          show_library_seats: r.show_library_seats,
+                                          library_reservation_url: r.library_reservation_url,
+                                          show_reservation_button: r.show_reservation_button,
+                                      }
+                                    : m,
+                            ),
+                        );
+                    } else if (event.type === 'error') {
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === aiMsgId
+                                    ? { ...m, text: '죄송합니다. 일시적인 오류가 발생했습니다.', isStreaming: false, activeTools: [] }
+                                    : m,
+                            ),
+                        );
+                    }
+                },
                 userLocation?.latitude,
                 userLocation?.longitude,
                 withCredentials ? libraryCredentials.username : undefined,
-                withCredentials ? libraryCredentials.password : undefined
+                withCredentials ? libraryCredentials.password : undefined,
             );
-
-            // 로그인 필요 감지
-            if (response.message.includes('학번') && response.message.includes('비밀번호') && !withCredentials) {
-                setShowLibraryLogin(true);
-                setPendingLibraryMessage(messageToSend);
-
-                const aiMessage: Message = {
-                    id: (Date.now() + 1).toString(),
-                    text: response.message,
-                    isUser: false,
-                    timestamp: new Date().toISOString(),
-                    needs_library_login: true,
-                    pending_message: messageToSend
-                };
-                setMessages((prev) => [...prev, aiMessage]);
-            } else {
-                // 로그인 성공 또는 로그인 불필요한 경우
-                if (withCredentials) {
-                    setShowLibraryLogin(false);
-                    setLibraryCredentials({ username: '', password: '' });
-                    setPendingLibraryMessage('');
-                }
-
-                const aiMessage: Message = {
-                    id: (Date.now() + 1).toString(),
-                    text: response.message,
-                    isUser: false,
-                    timestamp: new Date().toISOString(),
-                    classroomInfo: response.classroom,
-                    mapLink: response.map_link,
-                    showMapButton: response.show_map_button,
-                    notices: response.notices,
-                    meals: response.meals,
-                    seats: response.seats,
-                    requirements: response.requirements,
-                    show_requirements: response.show_requirements,
-                    evaluation: response.evaluation,
-                    show_evaluation: response.show_evaluation,
-                    library_info: response.library_info,
-                    show_library_info: response.show_library_info,
-                    library_seats: response.library_seats,
-                    show_library_seats: response.show_library_seats,
-                    library_reservation_url: response.library_reservation_url,
-                    show_reservation_button: response.show_reservation_button,
-                };
-
-                setMessages((prev) => [...prev, aiMessage]);
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            const errorMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                text: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-                isUser: false,
-                timestamp: new Date().toISOString(),
-            };
-            setMessages((prev) => [...prev, errorMessage]);
-
-            // 로그인 폼도 닫기
+        } catch (streamError) {
+            console.error('Stream error:', streamError);
+            setMessages((prev) =>
+                prev.map((m) =>
+                    m.id === aiMsgId
+                        ? { ...m, text: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', isStreaming: false, activeTools: [] }
+                        : m,
+                ),
+            );
             if (withCredentials) {
                 setShowLibraryLogin(false);
                 setLibraryCredentials({ username: '', password: '' });
@@ -258,22 +301,7 @@ const ChatInterface: React.FC = () => {
                     <MessageBubble key={message.id} message={message} />
                 ))}
 
-                {/* 로딩 애니메이션 */}
-                {isLoading && (
-                    <div className="flex items-start gap-2 animate-slide-up">
-                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-khu-primary to-khu-red-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md">
-                            AI
-                        </div>
-                        <div className="bg-white rounded-bubble px-5 py-4 shadow-md">
-                            <div className="typing-indicator">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">답변 생성 중...</p>
-                        </div>
-                    </div>
-                )}
+                {/* 스트리밍 중엔 placeholder 메시지가 바로 렌더되므로 별도 로딩 표시 불필요 */}
 
                 {/* 도서관 로그인 폼 */}
                 {showLibraryLogin && (

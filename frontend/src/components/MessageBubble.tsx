@@ -11,6 +11,8 @@ interface MessageBubbleProps {
     message: {
         text: string;
         isUser: boolean;
+        isStreaming?: boolean;
+        activeTools?: string[];
         classroomInfo?: any;
         notices?: any[];
         meals?: any[];
@@ -57,6 +59,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                                 : 'bg-white text-gray-800'
                             }`}
                     >
+                        {/* tool 실행 중 상태 표시 */}
+                        {message.activeTools && message.activeTools.length > 0 && (
+                            <div className="mb-2 space-y-1">
+                                {message.activeTools.map((label, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-xs text-khu-primary animate-pulse">
+                                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        </svg>
+                                        <span>{label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         {/* 텍스트 내용 */}
                         <div className={`prose-custom ${message.isUser ? 'prose-user text-white' : ''}`}>
                             <ReactMarkdown
@@ -74,6 +91,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                             >
                                 {message.text}
                             </ReactMarkdown>
+                            {/* 스트리밍 커서 */}
+                            {message.isStreaming && (
+                                <span className="inline-block w-0.5 h-4 bg-khu-primary ml-0.5 animate-pulse align-middle" />
+                            )}
                         </div>
 
                         {/* 강의실 정보 */}

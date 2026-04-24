@@ -15,7 +15,7 @@ from .config import get_settings, configure_logging
 from .exceptions import AgentKHUError, MCPServerUnavailableError, MCPToolTimeoutError
 from .database import engine
 from . import models
-from .routers import classrooms, notices, chat, auth, profiles, cache, curriculum
+from .routers import classrooms, notices, chat, chat_stream, auth, profiles, cache, curriculum
 from .mcp_client import mcp_client
 from .cache import cache_manager
 from .observability import obs_logger
@@ -144,6 +144,7 @@ app.include_router(profiles.router)
 app.include_router(classrooms.router)
 app.include_router(notices.router)
 app.include_router(chat.router)
+app.include_router(chat_stream.router)
 app.include_router(cache.router)
 app.include_router(curriculum.router)
 
