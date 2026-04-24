@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-khu
+  labels:
+    app.kubernetes.io/name: agent-khu
+    app.kubernetes.io/managed-by: kubectl

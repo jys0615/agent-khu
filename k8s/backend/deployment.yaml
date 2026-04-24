@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: agent-khu
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0       # Zero-downtime 롤링 업데이트
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      # DB 마이그레이션 완료 후 앱 시작
+      initContainers:
+        - name: db-migrate
+          image: ghcr.io/jys0615/agent-khu/backend:latest
+          imagePullPolicy: Always
+          command: ["python", "init_db.py"]
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agent-khu-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(POSTGRES_PASSWORD)@postgres-service:5432/agent_khu"
+
+      containers:
+        - name: backend
+          image: ghcr.io/jys0615/agent-khu/backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            # Secret → 먼저 선언해야 DATABASE_URL에서 참조 가능
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agent-khu-secret
+                  key: POSTGRES_PASSWORD
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-khu-secret
+                  key: ANTHROPIC_API_KEY
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-khu-secret
+                  key: SECRET_KEY
+            # ConfigMap
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-khu-config
+                  key: REDIS_URL
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-khu-config
+                  key: ELASTICSEARCH_URL
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-khu-config
+                  key: ALLOWED_ORIGINS
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-khu-config
+                  key: LOG_LEVEL
+            # K8s 환경변수 substitution: $(VAR) 사용
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(POSTGRES_PASSWORD)@postgres-service:5432/agent_khu"
+          resources:
+            requests:
+              cpu:    "250m"
+              memory: "512Mi"
+            limits:
+              cpu:    "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3

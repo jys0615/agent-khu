@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-khu-config
+  namespace: agent-khu
+data:
+  POSTGRES_DB:         "agent_khu"
+  POSTGRES_USER:       "postgres"
+  REDIS_URL:           "redis://redis-service:6379"
+  ELASTICSEARCH_URL:   "http://elasticsearch-service:9200"
+  ALLOWED_ORIGINS:     "https://agent-khu.example.com"
+  LOG_LEVEL:           "INFO"
