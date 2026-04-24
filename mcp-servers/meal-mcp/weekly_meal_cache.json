@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-04-24T00:22:57.620315",
+  "created_at": "2026-04-24T01:23:23.856441",
   "week_start": "2026-04-20",
   "weekly_data": {
     "2026-04-20": {
@@ -7,15 +7,15 @@
         "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "lunch",
-        "menu": "미트볼커리덮밥",
-        "price": 5000,
+        "menu": "미트볼하이라이스",
+        "price": 6000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "dinner",
-        "menu": "마라로제떡볶이",
+        "menu": "차이나짜장덮밥",
         "price": 6000,
         "available": true
       }
@@ -25,16 +25,16 @@
         "date": "2026-04-21",
         "day": "화요일",
         "meal_type": "lunch",
-        "menu": "냉우동",
-        "price": 5500,
+        "menu": "달안육개장",
+        "price": 6000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-21",
         "day": "화요일",
         "meal_type": "dinner",
-        "menu": "잘갈킨팬치킨덮밥",
-        "price": 5000,
+        "menu": "매콤달콤순살닭볶음",
+        "price": 6000,
         "available": true
       }
     },
@@ -43,15 +43,15 @@
         "date": "2026-04-22",
         "day": "수요일",
         "meal_type": "lunch",
-        "menu": "단호박카레파스타",
-        "price": 5500,
+        "menu": "단지치킨덮밥",
+        "price": 6000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-22",
         "day": "수요일",
         "meal_type": "dinner",
-        "menu": "부타동덮밥수제밥",
+        "menu": "돈육스태이크필라프",
         "price": 6000,
         "available": true
       }
@@ -61,15 +61,15 @@
         "date": "2026-04-23",
         "day": "목요일",
         "meal_type": "lunch",
-        "menu": "고추잡채덮밥",
-        "price": 5500,
+        "menu": "돈육강정덮밥",
+        "price": 6000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-23",
         "day": "목요일",
         "meal_type": "dinner",
-        "menu": "도토리묵무침정식",
+        "menu": "세우튀김우동",
         "price": 6000,
         "available": true
       }
@@ -79,15 +79,15 @@
         "date": "2026-04-24",
         "day": "금요일",
         "meal_type": "lunch",
-        "menu": "소보로그라탕덮밥",
-        "price": 5500,
+        "menu": "소보로크림빵버거",
+        "price": 6000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-24",
         "day": "금요일",
         "meal_type": "dinner",
-        "menu": "노출치즈닭갈비덮밥",
+        "menu": "누룽지수제갈비만두탕",
         "price": 6000,
         "available": true
       }

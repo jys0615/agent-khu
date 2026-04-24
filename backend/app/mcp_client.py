@@ -1,6 +1,9 @@
 """
-MCP 클라이언트 - 공식 MCP SDK 사용 (안정판)
-매 tool 호출마다 세션 생성/종료 → Context 관리 문제 완전 해결
+MCP 클라이언트 - 영구 세션 풀 (Phase 1 리팩토링)
+
+Before: call_tool() 호출마다 subprocess spawn + initialize(12s) + 종료
+After : 앱 startup에 1회 세션 생성 → 이후 모든 호출에서 재사용
+        실패 시 자동 재연결 1회 재시도 (_reconnect_lock으로 경합 방지)
 """
 from __future__ import annotations
 
@@ -8,6 +11,7 @@ import os
 import sys
 import asyncio
 import logging
+from contextlib import AsyncExitStack
 from typing import Dict, Any, Optional
 from pathlib import Path
 
@@ -17,16 +21,67 @@ from mcp.client.stdio import stdio_client
 log = logging.getLogger(__name__)
 
 
+class MCPServerSession:
+    """개별 MCP 서버와의 영구 세션"""
+
+    def __init__(self, name: str, params: StdioServerParameters) -> None:
+        self.name = name
+        self.params = params
+        self._session: Optional[ClientSession] = None
+        self._exit_stack = AsyncExitStack()
+        self._reconnect_lock = asyncio.Lock()
+
+    async def start(self) -> None:
+        read, write = await self._exit_stack.enter_async_context(
+            stdio_client(self.params)
+        )
+        self._session = await self._exit_stack.enter_async_context(
+            ClientSession(read, write)
+        )
+        await asyncio.wait_for(self._session.initialize(), timeout=15.0)
+        log.info("MCP 세션 시작: %s", self.name)
+
+    async def stop(self) -> None:
+        try:
+            await self._exit_stack.aclose()
+        except Exception as e:
+            log.debug("MCP 세션 종료 중 오류 (%s): %s", self.name, e)
+        finally:
+            self._exit_stack = AsyncExitStack()
+            self._session = None
+        log.info("MCP 세션 종료: %s", self.name)
+
+    async def call_tool(self, tool_name: str, arguments: dict, timeout: float) -> Any:
+        # 세션 없으면 lazy start (startup 실패 서버 대비)
+        if self._session is None:
+            async with self._reconnect_lock:
+                if self._session is None:
+                    await self.start()
+
+        try:
+            return await asyncio.wait_for(
+                self._session.call_tool(tool_name, arguments),
+                timeout=timeout,
+            )
+        except Exception as e:
+            log.warning("MCP tool 실패, 재연결 시도 (%s.%s): %s", self.name, tool_name, e)
+            async with self._reconnect_lock:
+                await self.stop()
+                await self.start()
+            return await asyncio.wait_for(
+                self._session.call_tool(tool_name, arguments),
+                timeout=timeout,
+            )
+
+
 class MCPClient:
-    """공식 MCP SDK를 사용하는 클라이언트 (안정적 구현)"""
+    """영구 세션 풀 기반 MCP 클라이언트"""
 
     def __init__(self) -> None:
         self.server_paths: Dict[str, Path] = {}
         self.server_params: Dict[str, StdioServerParameters] = {}
-        # 서버별 호출 직렬화를 위한 락 (프로세스 스폰 경합 방지)
-        self._locks: Dict[str, asyncio.Lock] = {}
+        self._sessions: Dict[str, MCPServerSession] = {}
 
-        # MCP 서버 경로 해상도
         env_root = os.getenv("MCP_ROOT")
         candidates = []
 
@@ -35,14 +90,12 @@ class MCPClient:
             if p.exists():
                 candidates.append(p)
 
-        # 프로젝트 루트 기준
         try:
             repo_root = Path(__file__).resolve().parents[2]
             candidates.append(repo_root / "mcp-servers")
         except Exception:
             pass
 
-        # 실행 위치 기준
         try:
             cwd = Path(os.getcwd()).resolve()
             candidates.append((cwd / "../mcp-servers").resolve())
@@ -50,7 +103,6 @@ class MCPClient:
         except Exception:
             pass
 
-        # 폴백
         candidates.append(Path.home() / "Desktop/agent-khu/mcp-servers")
 
         root: Optional[Path] = None
@@ -69,49 +121,59 @@ class MCPClient:
         self.mcp_dir = root
         log.debug("MCP_DIR = %s", self.mcp_dir)
 
-        # 기본 서버 경로 등록
         self._register_default_servers()
 
     def _register_default_servers(self) -> None:
-        """기본 MCP 서버 경로 등록"""
         paths = {
             "classroom": self.mcp_dir / "classroom-mcp/server.py",
-            "notice": self.mcp_dir / "notice-mcp/server.py",
-            "meal": self.mcp_dir / "meal-mcp/server.py",
-            "library": self.mcp_dir / "library-mcp/server.py",
-            "course": self.mcp_dir / "course-mcp/server.py",
+            "notice":    self.mcp_dir / "notice-mcp/server.py",
+            "meal":      self.mcp_dir / "meal-mcp/server.py",
+            "library":   self.mcp_dir / "library-mcp/server.py",
+            "course":    self.mcp_dir / "course-mcp/server.py",
             "curriculum": self.mcp_dir / "curriculum-mcp/server.py",
         }
         self.server_paths.update(paths)
-        
-        # 환경변수 준비 (DATABASE_URL 포함)
+
         env = os.environ.copy()
-        # Ensure MCP subprocesses can import the backend `app` package
         try:
-            backend_root = Path(__file__).resolve().parents[1]  # .../backend
+            backend_root = Path(__file__).resolve().parents[1]
             existing_pp = env.get("PYTHONPATH", "")
             pp_parts = [p for p in existing_pp.split(os.pathsep) if p]
             if str(backend_root) not in pp_parts:
                 pp_parts.append(str(backend_root))
             env["PYTHONPATH"] = os.pathsep.join(pp_parts) if pp_parts else str(backend_root)
-            # Avoid stdout buffering surprises
             env.setdefault("PYTHONUNBUFFERED", "1")
         except Exception:
             pass
-        
-        # 실행할 파이썬 인터프리터 (현재 프로세스와 동일한 인터프리터 사용)
+
         python_cmd = sys.executable or "python3"
 
-        # StdioServerParameters 미리 생성
         for name, path in paths.items():
             if path.exists():
                 self.server_params[name] = StdioServerParameters(
                     command=python_cmd,
                     args=[str(path)],
-                    env=env  # ✅ 환경변수 전달
+                    env=env,
                 )
-                # 각 서버별 Lock 준비
-                self._locks.setdefault(name, asyncio.Lock())
+                self._sessions[name] = MCPServerSession(name, self.server_params[name])
+
+    async def start_all(self) -> None:
+        """앱 startup 시 모든 MCP 서버 세션을 동시에 시작"""
+        results = await asyncio.gather(
+            *[s.start() for s in self._sessions.values()],
+            return_exceptions=True,
+        )
+        for name, result in zip(self._sessions.keys(), results):
+            if isinstance(result, Exception):
+                log.warning("MCP 세션 시작 실패 (%s): %s — lazy start로 대체", name, result)
+
+    async def stop_all(self) -> None:
+        """앱 shutdown 시 모든 세션 종료"""
+        await asyncio.gather(
+            *[s.stop() for s in self._sessions.values()],
+            return_exceptions=True,
+        )
+        log.info("MCP Client 전체 종료 완료")
 
     async def call_tool(
         self,
@@ -119,80 +181,19 @@ class MCPClient:
         tool_name: str,
         arguments: Dict[str, Any],
         *,
-        timeout: float = 5.0,
-        retries: int = 1
+        timeout: float = 10.0,
+        retries: int = 1,  # API 호환성 유지 (내부 retry는 MCPServerSession에서 처리)
     ) -> Any:
-        """
-        MCP Tool 호출 (매번 세션 생성/종료)
-        
-        이 방식은:
-        1. Context가 같은 함수에서 생성/종료됨 ✅
-        2. Task 불일치 문제 없음 ✅
-        3. MCP 표준 완전 준수 ✅
-        """
-        
-        params = self.server_params.get(server_name)
-        if not params:
+        session = self._sessions.get(server_name)
+        if not session:
             raise ValueError(f"등록되지 않은 MCP 서버: {server_name}")
 
-        attempt = 0
-        while True:
-            try:
-                # 서버별 직렬화로 프로세스 스폰 경합 방지
-                lock = self._locks.setdefault(server_name, asyncio.Lock())
-                async with lock:
-                    # stdio_client context: 프로세스 생성/종료
-                    async with stdio_client(params) as (read, write):
-                        # ClientSession context: 세션 초기화/종료
-                        async with ClientSession(read, write) as session:
-                            # 초기화 (타임아웃 적용) — 콜드스타트 대비 여유를 더 줌
-                            init_timeout = max(timeout, 12.0)
-                            await asyncio.wait_for(session.initialize(), timeout=init_timeout)
-
-                            # Preflight: list_tools로 서버 준비 상태 확인 (무시 가능)
-                            try:
-                                await asyncio.wait_for(session.list_tools(), timeout=5.0)
-                            except Exception:
-                                # 일부 서버는 list_tools를 느리게 반환할 수 있음 — 실패해도 계속 진행
-                                pass
-
-                            # Tool 호출 (타임아웃 적용)
-                            call_timeout = max(timeout, 10.0)
-                            result = await asyncio.wait_for(
-                                session.call_tool(tool_name, arguments), timeout=call_timeout
-                            )
-
-                            # 결과 파싱
-                            parsed_result = self._parse_result(result)
-
-                            return parsed_result
-            
-            # 여기서 context 자동 종료 ✅
-            
-            except Exception as e:
-                attempt += 1
-                error_type = type(e).__name__
-                error_msg = str(e)
-                
-                # ExceptionGroup 내부 예외 추출
-                if hasattr(e, 'exceptions'):
-                    inner_errors = [str(ex) for ex in e.exceptions[:3]]  # 첫 3개만
-                    error_msg = f"{error_msg} | Inner: {', '.join(inner_errors)}"
-                
-                log.error("MCP Tool 호출 실패(%s/%s): %s.%s - %s: %s", attempt, retries + 1, server_name, tool_name, error_type, error_msg)
-                
-                if attempt > retries:
-                    raise Exception(f"MCP error after {retries+1} attempts: {error_type} - {error_msg}")
-                # 에러 유형 기반 백오프 조정
-                backoff = 0.5 * attempt
-                if "handler is closed" in error_msg or "TCPTransport closed" in error_msg:
-                    backoff = max(backoff, 1.0)
-                await asyncio.sleep(backoff)
+        result = await session.call_tool(tool_name, arguments, timeout)
+        return self._parse_result(result)
 
     def _parse_result(self, result: Any) -> Any:
         """MCP 결과 파싱"""
         if hasattr(result, 'content') and result.content:
-            # content가 리스트인 경우
             if isinstance(result.content, list):
                 texts = []
                 for item in result.content:
@@ -200,34 +201,22 @@ class MCPClient:
                         texts.append(item.text)
                     elif isinstance(item, dict) and 'text' in item:
                         texts.append(item['text'])
-                
                 if texts:
                     combined = "\n".join(texts)
-                    # JSON 파싱 시도
                     try:
                         import json
                         return json.loads(combined)
                     except json.JSONDecodeError:
                         return combined
-
-            # content가 단일 객체인 경우
             if hasattr(result.content, 'text'):
                 try:
                     import json
                     return json.loads(result.content.text)
                 except json.JSONDecodeError:
                     return result.content.text
-        
         return result
 
-    async def stop_all_servers(self):
-        """
-        서버 종료 (실제로는 할 일 없음)
-        각 call_tool에서 이미 context가 종료되었음
-        """
-        log.info("MCP Client 종료")
-
-    # Convenience wrappers for common servers/tools
+    # ── Convenience wrappers ──────────────────────────────────────────────────
     async def meal_get_today(self, meal_type: str = "lunch") -> Any:
         return await self.call_tool("meal", "get_today_meal", {"meal_type": meal_type})
 

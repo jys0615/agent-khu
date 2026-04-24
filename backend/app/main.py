@@ -53,8 +53,11 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning("RAG Agent 초기화 중 오류: %s", e)
 
-    # 5) MCP 서버는 lazy start
-    log.info("MCP 서버는 첫 tool 호출 시 자동으로 시작됩니다.")
+    # 5) MCP 영구 세션 풀 시작 (Phase 1: 콜드스타트 제거)
+    try:
+        await mcp_client.start_all()
+    except Exception as e:
+        log.warning("MCP 세션 풀 시작 중 오류 (lazy start로 대체): %s", e)
 
     # 6) 백그라운드 스케줄러 시작
     try:
@@ -62,40 +65,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning("스케줄러 시작 중 오류: %s", e)
 
-    # 7) MCP 서버 콜드스타트 완화: 가벼운 워밍업 (비차단)
-    try:
-        import asyncio as _asyncio
-
-        async def _warmup():
-            # curriculum — 졸업요건 조회 빈도가 높음
-            try:
-                await mcp_client.call_tool(
-                    "curriculum", "get_requirements",
-                    {"program": "KHU-CSE", "year": "latest"},
-                    timeout=15.0, retries=1,
-                )
-                log.info("MCP 워밍업: curriculum.get_requirements 완료")
-            except Exception as _e:
-                log.debug("MCP 워밍업 스킵 (curriculum): %s", _e)
-
-            # classroom — 첫 호출 시 DB 연결 초기화로 콜드스타트 길어짐
-            try:
-                await mcp_client.call_tool(
-                    "classroom", "search_classroom",
-                    {"query": "전101"},
-                    timeout=30.0, retries=0,
-                )
-                log.info("MCP 워밍업: classroom.search_classroom 완료")
-            except Exception as _e:
-                log.debug("MCP 워밍업 스킵 (classroom): %s", _e)
-
-        _asyncio.create_task(_warmup())
-    except Exception as e:
-        log.debug("MCP 워밍업 태스크 생성 실패 (무시 가능): %s", e)
-
     yield
 
     # 종료
+    try:
+        await mcp_client.stop_all()
+    except Exception as e:
+        log.warning("MCP 세션 풀 종료 중 오류: %s", e)
+
     try:
         await obs_logger.close()
     except Exception as e:
@@ -170,7 +147,7 @@ async def root():
         "version": "2.1.0-MCP+Observability",
         "architecture": "MCP (Model Context Protocol)",
         "features": ["Caching", "Observability", "Question Classification"],
-        "mcp_mode": "lazy_start",
+        "mcp_mode": "persistent_session_pool",
         "mcp_servers_available": list(mcp_client.server_params.keys()),
     }
 
@@ -183,10 +160,13 @@ async def health_check():
         "version": "2.1.0-MCP+Observability",
         "architecture": "MCP (Model Context Protocol)",
         "features": ["Caching", "Observability", "Question Classification"],
-        "mcp_mode": "lazy_start",
+        "mcp_mode": "persistent_session_pool",
         "mcp_servers_available": list(mcp_client.server_params.keys()),
+        "mcp_sessions_active": [
+            name for name, s in mcp_client._sessions.items() if s._session is not None
+        ],
     }
-    
+
     # Cache 상태
     try:
         cache_info = await cache_manager.get_cache_info()
@@ -215,6 +195,6 @@ async def ready():
     """준비 상태 확인"""
     return {
         "ready": True,
-        "mcp_mode": "lazy_start",
+        "mcp_mode": "persistent_session_pool",
         "mcp_servers_available": list(mcp_client.server_params.keys()),
     }
