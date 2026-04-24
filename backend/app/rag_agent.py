@@ -11,7 +11,7 @@ import os
 import logging
 from typing import Optional, Dict, Any, List
 from elasticsearch import AsyncElasticsearch
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ class RAGAgent:
                 "title":      title,
                 "content":    content,
                 "metadata":   metadata or {},
-                "indexed_at": datetime.utcnow().isoformat(),
+                "indexed_at": datetime.now(timezone.utc).isoformat(),
             }
             if expires_at:
                 doc["expires_at"] = expires_at
@@ -208,7 +208,7 @@ class RAGAgent:
             return 0
 
         actions = []
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         for doc in documents:
             actions.append({"index": {"_index": self.index_name, "_id": doc["doc_id"]}})
             body: Dict[str, Any] = {

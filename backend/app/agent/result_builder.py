@@ -161,8 +161,12 @@ def _append_meal_result(result: Dict[str, Any], meal: Any) -> None:
     result["meals"] = meal
     result["show_meals"] = True
     try:
-        src = meal.get("source_url") or meal.get("menu_url")
-        if src and src not in result["message"]:
-            result["message"] = result["message"].rstrip() + f"\n원본 메뉴표: {src}"
+        # meal은 list([meal_info]) — 첫 번째 항목에서 URL 추출
+        first = meal[0] if isinstance(meal, list) and meal else None
+        item = first if first is not None else (meal if isinstance(meal, dict) else None)
+        if item:
+            src = item.get("source_url") or item.get("menu_url")
+            if src and src not in result["message"]:
+                result["message"] = result["message"].rstrip() + f"\n원본 메뉴표: {src}"
     except Exception:
         pass

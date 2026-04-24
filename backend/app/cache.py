@@ -187,6 +187,10 @@ class CacheManager:
         except RedisError as e:
             return {"connected": False, "error": str(e)}
 
+    async def get_cache_info(self) -> dict:
+        """get_info() alias — main.py /health 엔드포인트에서 호출"""
+        return await self.get_info()
+
 
 # 싱글톤 인스턴스
 cache_manager = CacheManager()

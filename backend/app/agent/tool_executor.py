@@ -13,6 +13,15 @@ from .tools_definition import CACHE_TTL
 
 log = logging.getLogger(__name__)
 
+_DEPT_TO_PROGRAM: dict = {
+    "컴퓨터공학과": "KHU-CSE",
+    "컴퓨터공학부": "KHU-CSE",
+    "소프트웨어융합학과": "KHU-SW",
+    "인공지능학과": "KHU-AI",
+    "전자공학과": "KHU-ECE",
+    "산업경영공학과": "KHU-IME",
+}
+
 
 async def process_tool_call(
     tool_name: str,
@@ -40,20 +49,12 @@ async def process_tool_call(
 
             # 사용자 정보 기반으로 program/year 확정 (get_requirements / evaluate_progress)
             if tool_name in {"get_requirements", "evaluate_progress"}:
-                # 학과 → 프로그램 매핑
-                dept_map = {
-                    "컴퓨터공학과": "KHU-CSE",
-                    "컴퓨터공학부": "KHU-CSE",
-                    "소프트웨어융합학과": "KHU-SW",
-                    "인공지능학과": "KHU-AI",
-                }
-
                 program = derived_input.get("program")
                 year = derived_input.get("year")
 
                 if current_user:
                     if not program:
-                        program = dept_map.get(current_user.department, "KHU-CSE")
+                        program = _DEPT_TO_PROGRAM.get(current_user.department, "KHU-CSE")
                     if not year:
                         year = str(current_user.admission_year)
 
@@ -401,28 +402,15 @@ async def _handle_get_requirements(tool_input: dict, current_user: Optional[mode
     """
     program = tool_input.get("program")
     year = tool_input.get("year")
-    
-    # 학과명 → 프로그램 코드 매핑 (확장 가능)
-    dept_map = {
-        "컴퓨터공학과": "KHU-CSE",
-        "컴퓨터공학부": "KHU-CSE",
-        "소프트웨어융합학과": "KHU-SW",
-        "인공지능학과": "KHU-AI",
-        "전자공학과": "KHU-ECE",
-        "산업경영공학과": "KHU-IME"
-    }
-    
-    # 사용자 정보 우선 사용
+
     if current_user:
         if not program:
-            program = dept_map.get(current_user.department, "KHU-CSE")
+            program = _DEPT_TO_PROGRAM.get(current_user.department, "KHU-CSE")
             log.info("사용자 학과(%s) -> 프로그램(%s)", current_user.department, program)
-
         if not year:
             year = str(current_user.admission_year)
             log.info("사용자 입학년도(%s) 적용", current_user.admission_year)
 
-    # 기본값 설정 (사용자 미로그인 또는 학과 미매핑)
     if not program:
         program = "KHU-CSE"
     if not year:
@@ -468,28 +456,15 @@ async def _handle_evaluate_progress(tool_input: dict, current_user: Optional[mod
     program = tool_input.get("program")
     year = tool_input.get("year")
     taken_courses = tool_input.get("taken_courses", [])
-    
-    # 학과명 → 프로그램 코드 매핑
-    dept_map = {
-        "컴퓨터공학과": "KHU-CSE",
-        "컴퓨터공학부": "KHU-CSE",
-        "소프트웨어융합학과": "KHU-SW",
-        "인공지능학과": "KHU-AI",
-        "전자공학과": "KHU-ECE",
-        "산업경영공학과": "KHU-IME"
-    }
-    
-    # 사용자 정보 우선 사용
+
     if current_user:
         if not program:
-            program = dept_map.get(current_user.department, "KHU-CSE")
+            program = _DEPT_TO_PROGRAM.get(current_user.department, "KHU-CSE")
             log.info("사용자 학과(%s) -> 프로그램(%s)", current_user.department, program)
-
         if not year:
             year = str(current_user.admission_year)
             log.info("사용자 입학년도(%s) 적용", current_user.admission_year)
 
-    # 기본값 설정
     if not program:
         program = "KHU-CSE"
     if not year:

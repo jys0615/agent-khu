@@ -4,7 +4,7 @@ Observability Logger for Agent KHU
 """
 import logging
 from elasticsearch import AsyncElasticsearch
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 import os
 
@@ -93,7 +93,7 @@ class ObservabilityLogger:
         
         try:
             doc = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "question": question,
                 "user_id": user_id,
                 "question_type": question_type,

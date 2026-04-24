@@ -199,6 +199,87 @@ raw_results = await asyncio.gather(
 - `return_exceptions=True` 없이 gather를 쓰면 하나의 tool 타임아웃이
   전체 iteration을 ExceptionGroup으로 실패시킴. 부분 실패 허용이 필수.
 
+### [Phase 3] 버그 수정 4건
+
+**날짜**: 2026-04-24
+**수정 파일**: `tool_executor.py`, `cache.py`, `observability.py`, `rag_agent.py`, `result_builder.py`
+
+---
+
+#### 3-1. `DEPT_TO_PROGRAM` dict 중복 (tool_executor.py)
+
+**문제**: `_handle_get_requirements` (line ~406), `_handle_evaluate_progress` (line ~472), 캐시 키 생성부(line ~44)에 동일한 학과→프로그램 매핑 dict가 3군데 복붙.
+학과 추가 시 3곳을 모두 수정해야 했고, 한 곳을 빠뜨리면 캐시 키와 실제 호출 결과가 불일치.
+
+**해결**: 모듈 상단에 `_DEPT_TO_PROGRAM` 상수로 단일화, 전 3곳에서 참조.
+
+```python
+# Before — 3군데 각각 선언
+dept_map = {"컴퓨터공학과": "KHU-CSE", "소프트웨어융합학과": "KHU-SW", ...}
+
+# After — 모듈 상수 1개
+_DEPT_TO_PROGRAM = {"컴퓨터공학과": "KHU-CSE", ..., "산업경영공학과": "KHU-IME"}
+```
+
+---
+
+#### 3-2. `get_cache_info()` 메서드 누락 (cache.py)
+
+**문제**: `main.py` `/health` 엔드포인트가 `cache_manager.get_cache_info()`를 호출하는데, `CacheManager`에는 `get_info()`만 존재 → `/health` 호출마다 `AttributeError` 500.
+
+**증상**:
+```
+AttributeError: 'CacheManager' object has no attribute 'get_cache_info'
+GET /health → 500 Internal Server Error
+```
+
+**해결**: `get_info()`를 위임하는 alias 추가.
+
+```python
+async def get_cache_info(self) -> dict:
+    return await self.get_info()
+```
+
+---
+
+#### 3-3. `datetime.utcnow()` DeprecationWarning (observability.py, rag_agent.py)
+
+**문제**: Python 3.12부터 `datetime.utcnow()`가 deprecated. timezone-naive datetime을 반환해 Elasticsearch 타임스탬프에 timezone 정보가 없었음.
+
+**해결**:
+```python
+# Before
+from datetime import datetime
+datetime.utcnow().isoformat()
+
+# After
+from datetime import datetime, timezone
+datetime.now(timezone.utc).isoformat()
+```
+
+---
+
+#### 3-4. `_append_meal_result`의 `list.get()` AttributeError (result_builder.py)
+
+**문제**: `tool_executor.py`의 `_handle_get_today_meal`은 `{"meals": [meal_info]}` — **list** 반환.
+`result_builder.py`의 `_append_meal_result`는 `meal.get("source_url")` 호출 → list에 `.get()` 없음 → `AttributeError`.
+
+**재현 조건**: "오늘 학식 알려줘" 요청 시 원본 링크 추출 시도마다 발생. `except Exception: pass`로 묻혀 링크가 누락되었음.
+
+**해결**:
+```python
+# Before
+src = meal.get("source_url")   # meal이 list면 AttributeError
+
+# After
+first = meal[0] if isinstance(meal, list) and meal else None
+item = first if first is not None else (meal if isinstance(meal, dict) else None)
+if item:
+    src = item.get("source_url") or item.get("menu_url")
+```
+
+**교훈**: `except Exception: pass` 패턴이 타입 버그를 숨겼음. 타입 검사 선행 후 `.get()` 호출.
+
 ---
 
 ## 설치 문제
