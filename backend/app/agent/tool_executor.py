@@ -9,6 +9,7 @@ from ..mcp_client import mcp_client
 from .. import models
 from ..database import SessionLocal
 from ..cache import cache_manager
+from ..metrics import mcp_tool_calls
 from .tools_definition import CACHE_TTL
 
 log = logging.getLogger(__name__)
@@ -93,6 +94,7 @@ async def process_tool_call(
             cached = await cache_manager.get(cache_key)
             if cached:
                 log.debug("Cache HIT: %s", tool_name)
+                mcp_tool_calls.labels(tool_name=tool_name, status="cache_hit").inc()
                 return cached
             else:
                 log.debug("Cache MISS: %s", tool_name)
@@ -158,10 +160,12 @@ async def process_tool_call(
             await cache_manager.set(cache_key, result, ttl)
             log.debug("Cache SAVE: %s (TTL: %ss)", tool_name, ttl)
 
+        mcp_tool_calls.labels(tool_name=tool_name, status="success").inc()
         return result
 
     except Exception as e:
         log.error("Tool 실행 에러: %s", e)
+        mcp_tool_calls.labels(tool_name=tool_name, status="error").inc()
         return {"error": str(e)}
 
 

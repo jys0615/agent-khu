@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-04-24T01:33:07.015076",
+  "created_at": "2026-04-24T01:36:06.373808",
   "week_start": "2026-04-20",
   "weekly_data": {
     "2026-04-20": {
@@ -7,16 +7,16 @@
         "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "lunch",
-        "menu": "미송돼지갈비찜",
-        "price": 5500,
+        "menu": "마늘햄가츠비빔",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "dinner",
-        "menu": "콘치즈함박&에그",
-        "price": 5500,
+        "menu": "오삼불백",
+        "price": 6000,
         "available": true
       }
     },
@@ -25,16 +25,16 @@
         "date": "2026-04-21",
         "day": "화요일",
         "meal_type": "lunch",
-        "menu": "달걀장&닭강정",
-        "price": 5500,
+        "menu": "냉모밀",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-21",
         "day": "화요일",
         "meal_type": "dinner",
-        "menu": "볶음감자닭갈비덮밥",
-        "price": 5500,
+        "menu": "제육덮밥",
+        "price": 6000,
         "available": true
       }
     },
@@ -43,16 +43,16 @@
         "date": "2026-04-22",
         "day": "수요일",
         "meal_type": "lunch",
-        "menu": "갈치국수",
-        "price": 5500,
+        "menu": "감자옹심이",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-22",
         "day": "수요일",
         "meal_type": "dinner",
-        "menu": "홍파불닭닭갈비덮밥",
-        "price": 5500,
+        "menu": "돈육철판볶음",
+        "price": 6000,
         "available": true
       }
     },
@@ -61,16 +61,16 @@
         "date": "2026-04-23",
         "day": "목요일",
         "meal_type": "lunch",
-        "menu": "소보르닭한정식덮밥",
-        "price": 5500,
+        "menu": "간짜육수",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-23",
         "day": "목요일",
         "meal_type": "dinner",
-        "menu": "사천짜장덮밥",
-        "price": 5500,
+        "menu": "돈육된장짜글이",
+        "price": 6000,
         "available": true
       }
     },
@@ -79,16 +79,16 @@
         "date": "2026-04-24",
         "day": "금요일",
         "meal_type": "lunch",
-        "menu": "미송짬뽕라면&밥",
-        "price": 5500,
+        "menu": "소보로목살비빔밥",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-04-24",
         "day": "금요일",
         "meal_type": "dinner",
-        "menu": "세우특감탕",
-        "price": 5500,
+        "menu": "부성즉수제비스톡",
+        "price": 6000,
         "available": true
       }
     }

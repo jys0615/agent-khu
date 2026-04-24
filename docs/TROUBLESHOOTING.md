@@ -280,6 +280,53 @@ if item:
 
 **교훈**: `except Exception: pass` 패턴이 타입 버그를 숨겼음. 타입 검사 선행 후 `.get()` 호출.
 
+### [Phase 4] Prometheus + Grafana 모니터링 추가
+
+**날짜**: 2026-04-24
+**신규 파일**: `backend/app/metrics.py`, `monitoring/prometheus.yml`, `monitoring/grafana/**`
+**수정 파일**: `backend/app/main.py`, `tool_executor.py`, `agent_loop.py`, `docker-compose.yml`, `requirements.txt`
+
+#### 구조
+
+```
+Grafana (3000) ← 시각화
+    ↑ PromQL 쿼리
+Prometheus (9090) ← 메트릭 저장
+    ↑ 15초마다 scrape
+Backend /metrics ← prometheus_client 노출
+    ↑ 코드에서 직접 increment
+metrics.py (Counter / Histogram / Gauge)
+```
+
+#### 수집 메트릭
+
+| 메트릭 | 타입 | 레이블 | 의미 |
+|---|---|---|---|
+| `http_requests_total` | Counter | method, path, status | HTTP 요청 수 (자동) |
+| `http_request_duration_seconds` | Histogram | method, path | HTTP 레이턴시 (자동) |
+| `mcp_tool_calls_total` | Counter | tool_name, status | MCP 도구 호출 수 |
+| `agent_routing_total` | Counter | route | RAG/LLM/Fallback 비율 |
+| `agent_response_latency_seconds` | Histogram | route | Agent 응답 레이턴시 |
+| `mcp_active_sessions` | Gauge | — | 현재 활성 MCP 세션 수 |
+
+#### Grafana 대시보드 패널 4종
+1. **라우팅 분포** — Pie chart: RAG vs LLM vs Fallback 비율
+2. **MCP tool 호출 / 캐시 히트율** — Bar gauge: tool별 success/cache_hit/error
+3. **레이턴시 P50/P95/P99** — Time series: histogram_quantile로 계산
+4. **에러율 + 활성 세션** — Stat panel
+
+#### 접속
+```bash
+docker-compose up -d
+# Prometheus: http://localhost:9090
+# Grafana:    http://localhost:3000  (로그인 불필요, anonymous viewer)
+```
+
+#### 트러블슈팅 포인트
+- `prometheus-fastapi-instrumentator`는 FastAPI `app` 생성 직후, 라우터 등록 전에 `instrument(app).expose(app)`를 호출해야 `/metrics`가 정상 등록됨.
+- Grafana provisioning 경로: `datasources/` + `dashboards/` 두 폴더가 모두 있어야 자동 로드. 한쪽만 있으면 대시보드가 보이지 않음.
+- `mcp_active_sessions` Gauge는 startup에서 1회 set 후 세션 재연결 시 업데이트되지 않음 — 현재는 시작 시점 스냅샷. 필요 시 `MCPServerSession.start()` / `stop()`에 inc/dec 추가 가능.
+
 ---
 
 ## 설치 문제

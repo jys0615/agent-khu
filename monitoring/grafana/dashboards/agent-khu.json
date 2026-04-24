@@ -1,0 +1,80 @@
+{
+  "title": "Agent KHU Overview",
+  "uid": "agent-khu-overview",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Agent 라우팅 분포 (RAG vs LLM vs Fallback)",
+      "type": "piechart",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (route) (increase(agent_routing_total[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "MCP Tool 호출 수 / 캐시 히트율",
+      "type": "bargauge",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (tool_name, status) (increase(mcp_tool_calls_total[5m]))",
+          "legendFormat": "{{tool_name}} [{{status}}]"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "응답 레이턴시 P50 / P95 / P99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(agent_response_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(agent_response_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(agent_response_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "에러율 (MCP 실패 / HTTP 5xx)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(mcp_tool_calls_total{status=\"error\"}[5m]))",
+          "legendFormat": "MCP 에러"
+        },
+        {
+          "expr": "sum(increase(http_requests_total{status=~\"5..\"}[5m]))",
+          "legendFormat": "HTTP 5xx"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "활성 MCP 세션",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 8 },
+      "targets": [
+        {
+          "expr": "mcp_active_sessions",
+          "legendFormat": "활성 세션"
+        }
+      ]
+    }
+  ]
+}
