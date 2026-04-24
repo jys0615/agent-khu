@@ -65,3 +65,25 @@ docker-compose*.log
 *.pid.lock
 logs/
 external/khu-today-server/
+
+# ----------------------------
+# ML / Training artifacts
+# ----------------------------
+models/
+*.tar.gz
+*.bin
+*.safetensors
+backend/scripts/eval/*.json
+backend/scripts/eval/*.txt
+backend/scripts/eval/*.jsonl
+
+# ----------------------------
+# Meal cache (runtime generated)
+# ----------------------------
+mcp-servers/meal-mcp/weekly_meal_cache.json
+
+# ----------------------------
+# Coverage / Test artifacts
+# ----------------------------
+coverage.xml
+backend/coverage.xml

@@ -1,95 +1,95 @@
 {
-  "created_at": "2026-04-19T14:33:26.593563",
-  "week_start": "2026-04-13",
+  "created_at": "2026-04-24T00:22:57.620315",
+  "week_start": "2026-04-20",
   "weekly_data": {
-    "2026-04-13": {
+    "2026-04-20": {
       "lunch": {
-        "date": "2026-04-13",
+        "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "lunch",
-        "menu": "미트볼파김치파스타",
+        "menu": "미트볼커리덮밥",
         "price": 5000,
         "available": true
       },
       "dinner": {
-        "date": "2026-04-13",
+        "date": "2026-04-20",
         "day": "월요일",
         "meal_type": "dinner",
-        "menu": "코치미궁뚱미엿",
-        "price": 5000,
-        "available": true
-      }
-    },
-    "2026-04-14": {
-      "lunch": {
-        "date": "2026-04-14",
-        "day": "화요일",
-        "meal_type": "lunch",
-        "menu": "빨간날치알비빔밥",
-        "price": 5000,
-        "available": true
-      },
-      "dinner": {
-        "date": "2026-04-14",
-        "day": "화요일",
-        "meal_type": "dinner",
-        "menu": "청양콩나물비빔",
-        "price": 5000,
-        "available": true
-      }
-    },
-    "2026-04-15": {
-      "lunch": {
-        "date": "2026-04-15",
-        "day": "수요일",
-        "meal_type": "lunch",
-        "menu": "나시고랭&계란후라이",
-        "price": 5000,
-        "available": true
-      },
-      "dinner": {
-        "date": "2026-04-15",
-        "day": "수요일",
-        "meal_type": "dinner",
-        "menu": "치킨&사이다",
+        "menu": "마라로제떡볶이",
         "price": 6000,
         "available": true
       }
     },
-    "2026-04-16": {
+    "2026-04-21": {
       "lunch": {
-        "date": "2026-04-16",
-        "day": "목요일",
+        "date": "2026-04-21",
+        "day": "화요일",
         "meal_type": "lunch",
-        "menu": "눈꽃치즈돈까스카레",
-        "price": 5000,
+        "menu": "냉우동",
+        "price": 5500,
         "available": true
       },
       "dinner": {
-        "date": "2026-04-16",
-        "day": "목요일",
+        "date": "2026-04-21",
+        "day": "화요일",
         "meal_type": "dinner",
-        "menu": "생불고기뚝배기밥",
-        "price": 5500,
+        "menu": "잘갈킨팬치킨덮밥",
+        "price": 5000,
         "available": true
       }
     },
-    "2026-04-17": {
+    "2026-04-22": {
       "lunch": {
-        "date": "2026-04-17",
-        "day": "금요일",
+        "date": "2026-04-22",
+        "day": "수요일",
         "meal_type": "lunch",
-        "menu": "새우튀김짬뽕",
-        "price": 5000,
+        "menu": "단호박카레파스타",
+        "price": 5500,
         "available": true
       },
       "dinner": {
-        "date": "2026-04-17",
+        "date": "2026-04-22",
+        "day": "수요일",
+        "meal_type": "dinner",
+        "menu": "부타동덮밥수제밥",
+        "price": 6000,
+        "available": true
+      }
+    },
+    "2026-04-23": {
+      "lunch": {
+        "date": "2026-04-23",
+        "day": "목요일",
+        "meal_type": "lunch",
+        "menu": "고추잡채덮밥",
+        "price": 5500,
+        "available": true
+      },
+      "dinner": {
+        "date": "2026-04-23",
+        "day": "목요일",
+        "meal_type": "dinner",
+        "menu": "도토리묵무침정식",
+        "price": 6000,
+        "available": true
+      }
+    },
+    "2026-04-24": {
+      "lunch": {
+        "date": "2026-04-24",
+        "day": "금요일",
+        "meal_type": "lunch",
+        "menu": "소보로그라탕덮밥",
+        "price": 5500,
+        "available": true
+      },
+      "dinner": {
+        "date": "2026-04-24",
         "day": "금요일",
         "meal_type": "dinner",
-        "menu": "무운영",
-        "price": 0,
-        "available": false
+        "menu": "노출치즈닭갈비덮밥",
+        "price": 6000,
+        "available": true
       }
     }
   }

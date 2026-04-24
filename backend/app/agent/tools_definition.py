@@ -184,7 +184,7 @@ tools = [
     },
     {
         "name": "get_seat_availability",
-        "description": "경희대 도서관 실시간 좌석 현황 조회 (로그인 필요). 사용자가 도서관 좌석 정보를 물어볼 때 사용합니다.",
+        "description": "경희대 도서관 실시간 좌석 현황 조회. 사용자가 도서관 자리/좌석 정보를 물어볼 때 사용합니다. 로그인 정보가 없거나 서비스 점검 시에는 도서관 기본 정보와 예약 URL을 안내합니다.",
         "input_schema": {
             "type": "object",
             "properties": {

@@ -329,12 +329,18 @@ async def _handle_get_next_shuttle(tool_input: dict):
 async def _handle_search_courses(tool_input: dict):
     department = tool_input.get("department")
     keyword = tool_input.get("keyword")
-    result = await mcp_client.call_tool("course", "search_courses", {
-        "department": department,
-        "keyword": keyword
-        }, timeout=10.0)
-    data = json.loads(result) if isinstance(result, str) else result
-    return {"found": True, "courses": data.get("courses", [])}
+    try:
+        result = await mcp_client.call_tool("course", "search_courses", {
+            "department": department,
+            "keyword": keyword
+            }, timeout=60.0, retries=0)
+        data = json.loads(result) if isinstance(result, str) else result
+        if isinstance(data, dict) and "error" in data:
+            return {"found": False, "courses": [], "message": "현재 수업 정보 조회 서비스가 일시적으로 불가합니다."}
+        return {"found": True, "courses": data.get("courses", [])}
+    except Exception as e:
+        log.warning("course.search_courses 실패 (타임아웃/오류): %s", e)
+        return {"found": False, "courses": [], "message": "현재 수업 시간표 조회가 일시적으로 지연되고 있습니다. 학교 포털(https://sugang.khu.ac.kr)에서 직접 확인해 주세요."}
 
 
 async def _handle_search_curriculum(tool_input: dict):
@@ -525,7 +531,7 @@ async def _handle_get_library_info(tool_input: dict):
         "library_info": data,
         "library_reservation_url": "https://library.khu.ac.kr/seat",
         "show_reservation_button": True,
-        "message": "도서관 좌석 현황을 확인하려면 도서관 예약 시스템에 로그인하세요."
+        "message": "현재 도서관 실시간 좌석 현황 서비스가 일시적으로 점검 중입니다. 도서관 예약 시스템에서 직접 확인해 주세요."
     }
 
 
@@ -552,8 +558,23 @@ async def _handle_get_seat_availability(tool_input: dict, library_username: Opti
             log.warning("library cred cache 조회 실패: %s", e)
 
     if not library_username or not library_password:
-        return {"needs_login": True, "message": "도서관 로그인을 위해 학번과 비밀번호가 필요합니다."}
-    
+        # 로그인 정보 없으면 도서관 기본 정보 + 예약 URL 안내로 fallback
+        try:
+            lib_result = await mcp_client.call_tool("library", "get_library_info", tool_input, timeout=5.0)
+            lib_data = json.loads(lib_result) if isinstance(lib_result, str) else lib_result
+        except Exception:
+            lib_data = {}
+        return {
+            "needs_login": True,
+            "library_info": lib_data,
+            "library_reservation_url": "https://library.khu.ac.kr/seat",
+            "show_reservation_button": True,
+            "message": (
+                "현재 도서관 실시간 좌석 현황 서비스가 일시 점검 중입니다. "
+                "도서관 예약 시스템(https://library.khu.ac.kr/seat)에서 직접 확인해 주세요."
+            ),
+        }
+
     result = await mcp_client.call_tool("library", "get_seat_availability", {
         **tool_input,
         "username": library_username,
