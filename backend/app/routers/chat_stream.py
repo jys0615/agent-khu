@@ -133,9 +133,6 @@ async def chat_stream(
 
     # JSON 폴백: 스트리밍 없이 완료 후 반환
     try:
-        result_holder: dict = {}
-        tools_holder: list = []
-
         async def noop(_event: dict) -> None:
             pass
 
