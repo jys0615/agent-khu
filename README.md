@@ -1,6 +1,6 @@
 # Agent KHU 🎓
 
-> **AI Agent 기반** 경희대학교 캠퍼스 정보 통합 시스템
+> **AI Agent 기반** OOO학교 캠퍼스 정보 통합 시스템
 
 [![CI](https://github.com/jys0615/agent-khu/actions/workflows/ci.yml/badge.svg)](https://github.com/jys0615/agent-khu/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -8,7 +8,7 @@
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-purple.svg)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Agent KHU**는 [Anthropic Claude](https://www.anthropic.com/)와 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)을 활용하여 경희대학교 학생들에게 개인화된 캠퍼스 정보를 제공하는 AI 시스템입니다. Vision 기반 인식은 정확도를 위해 Opus 4.5 프롬프트로 개선되었습니다.
+**Agent KHU**는 [Anthropic Claude](https://www.anthropic.com/)와 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)을 활용하여 OOO학교 학생들에게 개인화된 캠퍼스 정보를 제공하는 AI 시스템입니다. Vision 기반 인식은 정확도를 위해 Opus 4.5 프롬프트로 개선되었습니다.
 
 ---
 
@@ -421,7 +421,7 @@ in the Software without restriction...
 
 - **[Anthropic](https://www.anthropic.com/)** - Claude AI 모델 제공
 - **[Model Context Protocol](https://modelcontextprotocol.io/)** - 표준 프로토콜
-- **경희대학교 소프트웨어융합대학** - 프로젝트 지원
+- **OOO학교 소프트웨어융합대학** - 프로젝트 지원
 - **오픈소스 커뮤니티** - 라이브러리 및 도구
 
 ---
