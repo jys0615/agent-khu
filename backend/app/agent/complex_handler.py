@@ -54,7 +54,8 @@ async def run_llm_agent(
         response = await _client.messages.create(
             model=_MODEL,
             max_tokens=2048,
-            system=system_prompt,
+            system=[{"type": "text", "text": system_prompt,
+                     "cache_control": {"type": "ephemeral"}}],
             messages=messages,
             tools=tools,
         )
@@ -225,7 +226,8 @@ async def run_llm_agent_stream(
         async with _client.messages.stream(
             model=_MODEL,
             max_tokens=2048,
-            system=system_prompt,
+            system=[{"type": "text", "text": system_prompt,
+                     "cache_control": {"type": "ephemeral"}}],
             messages=messages,
             tools=tools,
         ) as stream:

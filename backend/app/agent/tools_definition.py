@@ -1,5 +1,7 @@
 """
-MCP Tools 정의
+MCP Tools 정의 — MCP 2025 스펙 Tool Annotations 적용
+annotations.readOnly: 상태를 변경하지 않는 조회 전용 도구
+annotations.destructive: 되돌릴 수 없는 부작용이 있는 도구
 """
 
 tools = [
@@ -15,7 +17,8 @@ tools = [
                 }
             },
             "required": ["query"]
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "search_notices",
@@ -27,7 +30,8 @@ tools = [
                 "limit": {"type": "integer", "default": 5, "description": "결과 개수"}
             },
             "required": ["query"]
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "get_latest_notices",
@@ -42,7 +46,8 @@ tools = [
                 },
                 "limit": {"type": "integer", "default": 5, "description": "결과 개수"}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "crawl_fresh_notices",
@@ -56,7 +61,8 @@ tools = [
                 },
                 "limit": {"type": "integer", "default": 20}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "search_meals",
@@ -67,7 +73,8 @@ tools = [
                 "query": {"type": "string", "description": "검색할 메뉴"}
             },
             "required": ["query"]
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "get_next_shuttle",
@@ -77,7 +84,8 @@ tools = [
             "properties": {
                 "route": {"type": "string", "enum": ["to_station", "to_campus"]}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "search_courses",
@@ -88,7 +96,8 @@ tools = [
                 "department": {"type": "string", "description": "학과명 (예: 소프트웨어융합학과)"},
                 "keyword": {"type": "string", "description": "검색 키워드 (과목명, 교수명)"}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "search_curriculum",
@@ -100,7 +109,8 @@ tools = [
                 "year": {"type": "string", "description": "학년도", "default": "latest"}
             },
             "required": ["query"]
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "get_curriculum_by_semester",
@@ -112,7 +122,8 @@ tools = [
                 "year": {"type": "string", "default": "latest"}
             },
             "required": ["semester"]
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "list_programs",
@@ -122,12 +133,13 @@ tools = [
             "properties": {
                 "year": {"type": "string", "default": "latest"}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "get_requirements",
         "description": """졸업요건 조회
-        
+
 [로그인 사용자]
 - program, year 생략 가능 (자동으로 학과/입학년도 적용)
 - 예: "우리 학과 졸업요건이 뭐야?" → 자동으로 사용자의 학과/입학년도 적용
@@ -139,21 +151,22 @@ tools = [
             "type": "object",
             "properties": {
                 "program": {
-                    "type": "string", 
+                    "type": "string",
                     "description": "전공 코드 (예: KHU-CSE). 로그인 시 생략 가능"
                 },
                 "year": {
-                    "type": "string", 
+                    "type": "string",
                     "description": "입학년도 (예: 2019). 로그인 시 생략 가능"
                 }
             },
             "required": []
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "evaluate_progress",
         "description": """졸업요건 진행도 평가
-        
+
 [로그인 사용자]
 - program, year 생략 가능 (자동으로 학과/입학년도 적용)
 - 사용자의 이수 학점 자동 반영
@@ -169,8 +182,9 @@ tools = [
                 "year": {"type": "string", "description": "입학년도. 생략 가능"},
                 "taken_courses": {"type": "array", "items": {"type": "string"}}
             },
-            "required": ["taken_courses"] 
-        }
+            "required": ["taken_courses"]
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "get_library_info",
@@ -180,7 +194,8 @@ tools = [
             "properties": {
                 "campus": {"type": "string", "enum": ["seoul", "global"], "default": "global"}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "get_seat_availability",
@@ -190,7 +205,8 @@ tools = [
             "properties": {
                 "campus": {"type": "string", "enum": ["seoul", "global"], "default": "global"}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "reserve_seat",
@@ -202,7 +218,8 @@ tools = [
                 "seat_number": {"type": "string", "description": "좌석 번호 (선택)"}
             },
             "required": ["room"]
-        }
+        },
+        "annotations": {"readOnly": False, "destructive": False},
     },
     {
         "name": "get_today_meal",
@@ -212,26 +229,28 @@ tools = [
             "properties": {
                 "meal_type": {"type": "string", "enum": ["lunch", "dinner"], "default": "lunch"}
             }
-        }
+        },
+        "annotations": {"readOnly": True, "destructive": False},
     },
     {
         "name": "get_cafeteria_info",
         "description": "학생회관 식당 기본 정보를 조회합니다",
-        "input_schema": {"type": "object", "properties": {}}
+        "input_schema": {"type": "object", "properties": {}},
+        "annotations": {"readOnly": True, "destructive": False},
     }
 ]
 
 # 캐시 TTL 설정 (초 단위)
 CACHE_TTL = {
     "search_classroom": 86400,
-    "search_notices": 7200,      # 2시간 (1시간 → 2시간)
+    "search_notices": 7200,
     "get_latest_notices": 7200,
     "search_curriculum": 86400,
-    "get_requirements": 86400,   # ✅ 추가
-    "evaluate_progress": 3600,   # ✅ 추가 (1시간)
-    "get_library_info": 3600,    # 5분 → 1시간
+    "get_requirements": 86400,
+    "evaluate_progress": 3600,
+    "get_library_info": 3600,
     "get_seat_availability": 60,
-    "get_next_shuttle": 300,     # 3분 → 5분
+    "get_next_shuttle": 300,
     "get_cafeteria_info": 86400,
-    "get_today_meal": 3600,      # ✅ 추가 (1시간)
+    "get_today_meal": 3600,
 }

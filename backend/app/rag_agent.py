@@ -151,12 +151,12 @@ class RAGAgent:
             top_score = hits[0]["_score"]
             confidence = min(top_score / CONFIDENCE_SCALE, 1.0)
 
-            # 상위 문서 내용 합산
-            answer_parts = [h["_source"].get("content", "") for h in hits if h["_source"].get("content")]
+            docs = [h["_source"].get("content", "") for h in hits if h["_source"].get("content")]
 
             return {
                 "found": True,
-                "answer": "\n\n".join(answer_parts),
+                "docs": docs,                    # SLM 컨텍스트용 원문 리스트
+                "answer": "\n\n".join(docs),     # 하위 호환용 (fallback)
                 "confidence": confidence,
                 "category": hits[0]["_source"].get("category"),
                 "sources": [h["_source"].get("title", "") for h in hits],

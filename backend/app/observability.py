@@ -109,12 +109,37 @@ class ObservabilityLogger:
             await self.es.index(
                 index=self.index_name,
                 document=doc,
-                refresh=False  # ✅ 추가: 즉시 refresh 안 함 (성능 향상)
+                refresh=False,
             )
-            
+
+            # LLM 응답이 성공한 경우 → khu-rag-knowledge에 자동 피드백
+            # Simple 질문의 LLM 답변이 누적되어 이후 SLM RAG 지식으로 활용됨
+            if success and response and question_type == "simple":
+                await self._feed_to_rag(question, response)
+
         except Exception as e:
-            # 로깅 실패해도 메인 로직에 영향 없도록
             log.warning("Elasticsearch 로깅 실패: %s", e)
+
+    async def _feed_to_rag(self, question: str, response: str) -> None:
+        """성공한 LLM 응답을 RAG 지식 인덱스에 자동 인덱싱"""
+        try:
+            from hashlib import md5
+            doc_id = "interaction-" + md5(question.encode()).hexdigest()[:16]
+            await self.es.index(
+                index="khu-rag-knowledge",
+                id=doc_id,
+                document={
+                    "doc_id": doc_id,
+                    "category": "llm_interaction",
+                    "title": question[:100],
+                    "content": f"Q: {question}\nA: {response}",
+                    "metadata": {"source": "llm_feedback"},
+                    "indexed_at": datetime.now(timezone.utc).isoformat(),
+                },
+                refresh=False,
+            )
+        except Exception as e:
+            log.debug("RAG 피드백 인덱싱 실패 (무시): %s", e)
     
     async def get_simple_queries(
         self,

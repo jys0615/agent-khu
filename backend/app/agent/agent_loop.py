@@ -10,6 +10,7 @@ from .. import models
 from ..observability import obs_logger
 from ..question_classifier import classifier
 from ..rag_agent import get_rag_agent
+from ..slm_agent import get_slm_agent
 from ..metrics import agent_routing, agent_latency
 from .complex_handler import run_llm_agent, run_fallback
 
@@ -39,25 +40,45 @@ async def chat_with_claude_async(
 
     log.info("question_type=%s", question_type.upper())
 
-    # ── Simple 경로: RAG ──────────────────────────────────────────────────────
+    # ── Simple 경로: RAG 검색 → SLM 생성 ────────────────────────────────────
     if question_type == "simple":
         rag = get_rag_agent()
         if rag.enabled:
             rag_result = await rag.search(message)
             if rag_result["found"] and rag_result["confidence"] >= 0.7:
-                routing = "rag"
-                elapsed = time.time() - start
-                agent_routing.labels(route="rag").inc()
-                agent_latency.labels(route="rag").observe(elapsed)
-                await _log_interaction(
-                    message, current_user, question_type, routing, [],
-                    rag_result["answer"], start, success=True,
-                    metadata={
-                        "rag_confidence": rag_result["confidence"],
-                        "rag_category": rag_result.get("category"),
-                    },
-                )
-                return {"message": rag_result["answer"]}
+                slm = get_slm_agent()
+                if slm.enabled:
+                    slm_result = await slm.generate(
+                        question=message,
+                        context_docs=rag_result["docs"],
+                    )
+                    if slm_result["success"] and slm_result["confidence"] >= 0.6:
+                        routing = "rag_slm"
+                        elapsed = time.time() - start
+                        agent_routing.labels(route="rag_slm").inc()
+                        agent_latency.labels(route="rag_slm").observe(elapsed)
+                        await _log_interaction(
+                            message, current_user, question_type, routing, [],
+                            slm_result["message"], start, success=True,
+                            metadata={
+                                "rag_confidence": rag_result["confidence"],
+                                "slm_confidence": slm_result["confidence"],
+                                "rag_category": rag_result.get("category"),
+                            },
+                        )
+                        return {"message": slm_result["message"]}
+                else:
+                    # SLM 비활성 시 RAG 원문 그대로 반환 (기존 동작 유지)
+                    routing = "rag"
+                    elapsed = time.time() - start
+                    agent_routing.labels(route="rag").inc()
+                    agent_latency.labels(route="rag").observe(elapsed)
+                    await _log_interaction(
+                        message, current_user, question_type, routing, [],
+                        rag_result["answer"], start, success=True,
+                        metadata={"rag_confidence": rag_result["confidence"]},
+                    )
+                    return {"message": rag_result["answer"]}
         routing = "llm_fallback"
 
     # ── Complex 경로: LLM + Tool-Use ─────────────────────────────────────────
