@@ -1,4 +1,4 @@
-# 리팩토링 로드맵 — LLM/SLM 하이브리드 + Azure Phi-4 Mini
+# 리팩토링 로드맵 — LLM/SLM 하이브리드 + Groq Llama 3.1 8B
 
 > 작성일: 2026-05-17
 
@@ -12,7 +12,7 @@
 - `observability.py`: LLM 응답을 `agent-khu-interactions` 인덱스에 저장하지만, `khu-rag-knowledge`(RAG 검색 대상)에 **피드백되지 않음** → 연결 끊긴 파이프라인
 
 ### 목표
-- **비용 절감**: Simple 질문은 Claude Sonnet 대신 Azure Phi-4 Mini(약 120x 저렴)로 처리
+- **비용 절감**: Simple 질문은 Claude Sonnet 대신 Groq Llama 3.1 8B(무료 티어)로 처리
 - **진짜 RAG 구현**: 검색(Retrieval) + 생성(Generation) 2단계 완성
 - **지식 누적**: LLM 응답이 자동으로 RAG 지식베이스로 피드백되는 파이프라인 구축
 
@@ -27,7 +27,7 @@ QuestionClassifier (기존 정규식 유지)
     │
     ├─ Simple → RAGAgent.search() → khu-rag-knowledge BM25 검색
     │                ↓ (docs 원문 반환)
-    │           SLMAgent.generate(question, docs) → Azure Phi-4 Mini
+    │           SLMAgent.generate(question, docs) → Groq Llama 3.1 8B
     │                ↓
     │           응답 반환 (Claude 비용 없음)
     │
@@ -85,22 +85,15 @@ QuestionClassifier (기존 정규식 유지)
 
 ---
 
-## SLM 설정 — GitHub Models (현재) / Azure AI Foundry (추후 전환)
+## SLM 설정 — Groq (Llama 3.1 8B)
 
-### 현재: GitHub Models (무료)
-- 경희대 Azure 테넌트 정책으로 AI Foundry 리소스 생성 불가 → GitHub Models로 대체
-- 동일한 `azure-ai-inference` SDK 사용, 엔드포인트 URL만 다름
-- 전환 시 환경변수 2개만 교체하면 됨
+- 경희대 Azure 테넌트 정책으로 Azure AI Foundry 리소스 생성 불가
+- GitHub Models(`models.inference.ai.azure.com`)도 응답 타임아웃 발생
+- **Groq** 채택: 무료 티어(30 req/min), 800+ 토큰/초, `console.groq.com`에서 키 발급
 
 ### 환경변수
 ```env
-# GitHub Models (현재)
-GITHUB_TOKEN=ghp_...
-
-# Azure AI Foundry로 전환 시
-# AZURE_AI_ENDPOINT=https://<resource>.services.ai.azure.com/models
-# AZURE_AI_KEY=<api-key>
-AZURE_SLM_MODEL=Phi-4-mini-instruct  # 동일
+GROQ_API_KEY=gsk_...
 ```
 
 ---
