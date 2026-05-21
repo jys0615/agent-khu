@@ -272,7 +272,7 @@ Agent KHU:
 - **classroom-mcp**: 강의실 위치
 
 ### DevOps & Observability
-- **[Docker](https://www.docker.com/)** - 컨테이너화하여 로컬에서도 실행
+- **[Docker](https://www.docker.com/)** - 컨테이너화하여 로컬에서도 실행 가능
 - **[Docker Compose](https://docs.docker.com/compose/)** - 오케스트레이션
 - **[GitHub Actions](https://github.com/features/actions)** - CI (lint → test → build) / CD (GHCR 이미지 배포)
 - **[GitHub Container Registry](https://ghcr.io)** - Docker 이미지 레지스트리
