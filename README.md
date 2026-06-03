@@ -199,7 +199,7 @@ Agent KHU:
     └─ 불필요하면 → 최종 응답 생성
 ```
 
-자세한 내용은 [아키텍처 문서](docs/ARCHITECTURE.md) 참고
+자세한 내용은 [아키텍처 문서](docs/ARCHITECTURE.md) 참고 바랍니다.
 
 ---
 
