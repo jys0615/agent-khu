@@ -1,6 +1,6 @@
 # Agent KHU 🎓
 
-> **AI Agent 기반** 경희대학교 캠퍼스 정보 통합 시스템
+> **MCP 기반** 경희대학교 캠퍼스 정보 통합 AI Agent 시스템
 
 [![CI](https://github.com/jys0615/agent-khu/actions/workflows/ci.yml/badge.svg)](https://github.com/jys0615/agent-khu/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
