@@ -9,8 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
-from prometheus_fastapi_instrumentator import Instrumentator
-
 from .config import get_settings, configure_logging
 from .exceptions import AgentKHUError, MCPServerUnavailableError, MCPToolTimeoutError
 from .database import engine
@@ -21,7 +19,6 @@ from .cache import cache_manager
 from .observability import obs_logger
 from .rag_agent import get_rag_agent
 from .scheduler import start_scheduler, shutdown_scheduler
-from .metrics import mcp_active_sessions
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -59,8 +56,6 @@ async def lifespan(app: FastAPI):
     # 5) MCP 영구 세션 풀 시작 (Phase 1: 콜드스타트 제거)
     try:
         await mcp_client.start_all()
-        active = sum(1 for s in mcp_client._sessions.values() if s._session is not None)
-        mcp_active_sessions.set(active)
     except Exception as e:
         log.warning("MCP 세션 풀 시작 중 오류 (lazy start로 대체): %s", e)
 
@@ -102,12 +97,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Agent KHU - MCP Edition with Observability",
     description="경희대 MCP 기반 통합 정보 시스템",
-    version="2.2.0-MCP+Prometheus",
+    version="2.2.0-MCP",
     lifespan=lifespan,
 )
-
-# Prometheus HTTP 메트릭 자동 수집 + /metrics 엔드포인트 노출
-Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # ── 글로벌 예외 핸들러 ────────────────────────────────────────────
 

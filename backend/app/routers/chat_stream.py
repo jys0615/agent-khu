@@ -14,15 +14,16 @@ from typing import Optional, AsyncIterator
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 
-from ..agent.complex_handler import run_llm_agent_stream
-from ..auth import get_current_user_optional
+from ..agent.complex_handler import run_llm_agent_stream # LLM 처리 함수
+from ..auth import get_current_user_optional # 로그인 안 해도 사용 가능 (선택적)
 from .. import models, schemas
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["chat-stream"])
 
-# tool name → 한국어 상태 메시지
+# MCP tool 이름 → 프론트에 보여줄 한국어 상태 메시지
+# 사용자가 "도서관 좌석 조회 중..." 같은 피드백을 실시간으로 볼 수 있게 함
 TOOL_LABELS: dict[str, str] = {
     "get_classroom_info":      "강의실 정보 조회 중...",
     "get_cafeteria_menu":      "학식 메뉴 확인 중...",
@@ -37,6 +38,8 @@ TOOL_LABELS: dict[str, str] = {
 
 
 def _sse(data: dict) -> str:
+    # SSE 프로토콜 포맷: "data: {...}\n\n"
+    # \n\n -> 이벤트 하나의 끝을 의미
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 

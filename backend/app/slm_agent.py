@@ -9,6 +9,7 @@ import logging
 from typing import Optional, Dict, Any, List
 
 from groq import Groq
+from .config import get_settings
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ _SYSTEM_PROMPT = """경희대학교 AI 어시스턴트입니다.
 
 class SLMAgent:
     def __init__(self) -> None:
-        api_key = os.getenv("GROQ_API_KEY")
+        api_key = get_settings().groq_api_key or os.getenv("GROQ_API_KEY")
         self.enabled = False
         self._client: Optional[Groq] = None
 

@@ -16,7 +16,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env"),  # backend/.env 없으면 루트 .env 탐색
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -24,6 +24,9 @@ class Settings(BaseSettings):
 
     # ── 필수 ──────────────────────────────────────────────────────
     anthropic_api_key: str
+
+    # ── SLM (Groq) ───────────────────────────────────────────────
+    groq_api_key: str = ""
 
     # ── DB ───────────────────────────────────────────────────────
     database_url: str = "postgresql://postgres:postgres@localhost:5432/agent_khu"

@@ -11,7 +11,6 @@ from ..observability import obs_logger
 from ..question_classifier import classifier
 from ..rag_agent import get_rag_agent
 from ..slm_agent import get_slm_agent
-from ..metrics import agent_routing, agent_latency
 from .complex_handler import run_llm_agent, run_fallback
 
 log = logging.getLogger(__name__)
@@ -54,9 +53,6 @@ async def chat_with_claude_async(
                     )
                     if slm_result["success"] and slm_result["confidence"] >= 0.6:
                         routing = "rag_slm"
-                        elapsed = time.time() - start
-                        agent_routing.labels(route="rag_slm").inc()
-                        agent_latency.labels(route="rag_slm").observe(elapsed)
                         await _log_interaction(
                             message, current_user, question_type, routing, [],
                             slm_result["message"], start, success=True,
@@ -70,9 +66,6 @@ async def chat_with_claude_async(
                 else:
                     # SLM 비활성 시 RAG 원문 그대로 반환 (기존 동작 유지)
                     routing = "rag"
-                    elapsed = time.time() - start
-                    agent_routing.labels(route="rag").inc()
-                    agent_latency.labels(route="rag").observe(elapsed)
                     await _log_interaction(
                         message, current_user, question_type, routing, [],
                         rag_result["answer"], start, success=True,
@@ -88,9 +81,6 @@ async def chat_with_claude_async(
             message, user_latitude, user_longitude,
             library_username, library_password, current_user,
         )
-        elapsed = time.time() - start
-        agent_routing.labels(route="llm").inc()
-        agent_latency.labels(route="llm").observe(elapsed)
         await _log_interaction(
             message, current_user, question_type, routing,
             tools_used, result["message"], start, success=True,
@@ -105,9 +95,6 @@ async def chat_with_claude_async(
             fb = await run_fallback(message, current_user)
             if fb:
                 fb_tools = fb.pop("_tools_used", [])
-                elapsed = time.time() - start
-                agent_routing.labels(route="fallback_direct").inc()
-                agent_latency.labels(route="fallback_direct").observe(elapsed)
                 await _log_interaction(
                     message, current_user, question_type, "fallback_direct",
                     fb_tools, fb["message"], start, success=True,
@@ -116,7 +103,6 @@ async def chat_with_claude_async(
         except Exception as fe:
             log.warning("Fallback 실패: %s", fe)
 
-        agent_routing.labels(route="llm_fallback").inc()
         await _log_interaction(
             message, current_user, question_type, routing,
             tools_used, str(e), start, success=False, error_message=str(e),
