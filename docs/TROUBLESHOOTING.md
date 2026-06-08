@@ -280,7 +280,180 @@ if item:
 
 **교훈**: `except Exception: pass` 패턴이 타입 버그를 숨겼음. 타입 검사 선행 후 `.get()` 호출.
 
-### [Phase 4] Prometheus + Grafana 모니터링 추가
+### [Phase 4] 즉시 수정 4건 — 버그·보안·스케줄러 개선
+
+**날짜**: 2026-06-08
+**수정 파일**: `complex_handler.py`, `mcp_client.py`, `routers/cache.py`, `scheduler.py`
+**신규 파일**: `mcp-servers/shuttle-mcp/server.py`
+
+---
+
+#### 4-1. `_MAX_ITERATIONS = 2` → 8 — 다단계 질문 처리 불가 버그
+
+**문제**
+
+`complex_handler.py`의 Agent 루프 반복 상한이 2였어요.
+"졸업요건 확인하고 내 학점으로 진행도 계산해줘" 같은 다단계 질문은
+최소 3번의 루프(요건 조회 → 진행도 계산 → 최종 답변 생성)가 필요한데,
+2번에서 잘려 "죄송합니다. 답변을 생성하지 못했습니다." 가 반환됐어요.
+
+```python
+# Before
+_MAX_ITERATIONS = 2
+
+# After
+_MAX_ITERATIONS = 8
+```
+
+**설계 기준**
+
+- 단순 1-hop 질문: 1~2번 (tool 1개 → 답변)
+- 일반 복합 질문: 3~4번 (tool 2~3개 → 답변)
+- 상한 8은 비용·latency 안전망 (무한 루프 방지)
+- Claude는 충분한 정보가 쌓이면 `end_turn`으로 자체 종료하므로
+  상한을 올려도 실제 실행 횟수는 필요한 만큼만 소비됨
+
+---
+
+#### 4-2. shuttle MCP 서버 미등록 — `get_next_shuttle` 항상 실패 버그
+
+**문제**
+
+`tools_definition.py`에 `get_next_shuttle` tool이 선언되어 있고
+`tool_executor.py`도 처리 로직이 있었지만,
+`mcp_client.py`에 `"shuttle"` 서버 등록이 빠져 있었어요.
+
+```
+ValueError: 등록되지 않은 MCP 서버: shuttle
+```
+
+"셔틀 언제 와?" 질문마다 MCP 호출이 실패해 fallback 경로로 빠졌어요.
+
+**해결**
+
+`mcp-servers/shuttle-mcp/server.py` 신규 생성 (정적 시간표 기반),
+`mcp_client._register_default_servers()`에 등록:
+
+```python
+# mcp_client.py
+paths = {
+    ...
+    "shuttle": self.mcp_dir / "shuttle-mcp/server.py",  # 추가
+}
+```
+
+```
+mcp-servers/shuttle-mcp/server.py
+  ├ list_tools() → get_next_shuttle
+  └ call_tool()  → 현재 시각 기준 다음 출발 시간 계산
+```
+
+**트러블슈팅 포인트**
+
+- 셔틀 시간표는 학교 공식 발표 기준 정적 데이터로 구현.
+  실제 운행 변경 시 `SCHEDULES` dict를 업데이트하면 돼요.
+- 서버 파일이 없거나 경로가 다르면 `start_all()`에서 lazy start로 폴백.
+  로그에서 `"MCP 세션 시작 실패 (shuttle)"` 확인 후 경로 점검:
+
+```bash
+ls mcp-servers/shuttle-mcp/server.py
+```
+
+---
+
+#### 4-3. `/api/cache/clear` 무인증 노출 — 보안 버그
+
+**문제**
+
+`DELETE /api/cache/clear?pattern=*` 엔드포인트에 인증이 전혀 없었어요.
+외부에서 이 URL을 한 번 호출하면 Redis 캐시 전체가 삭제돼요.
+캐시 히트율 95%인 시스템에서 전체 삭제는 일시적인 성능 저하를 유발해요.
+
+**해결**
+
+환경변수 `ADMIN_SECRET_KEY` 기반의 `X-Admin-Key` 헤더 인증 추가:
+
+```python
+# .env
+ADMIN_SECRET_KEY=your-strong-random-secret
+
+# 호출 예시
+curl -X DELETE "http://localhost:8000/api/cache/clear?pattern=*" \
+     -H "X-Admin-Key: your-strong-random-secret"
+```
+
+**설계 결정**
+
+- User 모델에 admin 역할 필드가 없어 DB 스키마 변경 없이 구현 가능한
+  API Key 방식을 선택했어요. (Bearer JWT 방식보다 관리 오버헤드가 낮음)
+- `ADMIN_SECRET_KEY`를 설정하지 않으면 개발 편의를 위해 인증을 건너뛰고
+  경고 로그를 출력해요. 운영 환경에서는 반드시 설정 필요:
+
+```
+WARNING: ADMIN_SECRET_KEY not set — cache clear endpoint is unprotected
+```
+
+- 특정 패턴 삭제(`pattern=tool:*`)는 영향 범위가 제한적이지만 같은 인증 적용.
+
+---
+
+#### 4-4. `BackgroundScheduler` → `AsyncIOScheduler` — 이벤트 루프 충돌
+
+**문제**
+
+기존 `BackgroundScheduler`는 uvicorn과 **별도 스레드**에서 실행돼요.
+이 스레드에서 `asyncio.run()`을 호출하면 현재 실행 중인 uvicorn 이벤트 루프와
+충돌(`RuntimeError: This event loop is already running`)이 발생할 수 있어요.
+
+실제로 `sync_weekly_meal()`이 `asyncio.run(scrape_weekly_meal(api_key))`를
+직접 호출하고 있었고, `warm_cache()`도 매 1시간마다 새 이벤트 루프를
+생성(`asyncio.new_event_loop()`)해서 불필요한 루프 생성·소멸을 반복했어요.
+
+```python
+# Before — 위험한 패턴
+def sync_weekly_meal():
+    result = asyncio.run(scrape_weekly_meal(api_key))  # ← 루프 충돌 가능
+
+def warm_cache():
+    loop = asyncio.new_event_loop()      # ← 매번 새 루프 생성
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(_check())
+    loop.close()
+```
+
+**해결**
+
+`AsyncIOScheduler`로 전환, async 작업을 `async def`로 변환:
+
+```python
+# After — uvicorn 이벤트 루프 위에서 직접 실행
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+async def sync_weekly_meal():          # async def로 변환
+    result = await scrape_weekly_meal(api_key)  # ← 직접 await
+
+async def warm_cache():                # async def로 변환
+    await cache_manager.connect()     # ← 직접 await
+```
+
+**동작 원리**
+
+- `AsyncIOScheduler`는 uvicorn의 이벤트 루프에 바인딩됨
+- sync 작업(`sync_notices`, `sync_meals` 등 subprocess 기반)은
+  스케줄러가 자동으로 `loop.run_in_executor()`로 스레드풀에서 실행
+- async 작업(`sync_weekly_meal`, `warm_cache`)은 이벤트 루프에서 직접 실행
+- `asyncio.run()`과 `asyncio.new_event_loop()` 코드 완전 제거
+
+**주의사항**
+
+`AsyncIOScheduler`는 반드시 uvicorn 이벤트 루프가 실행 중인 상태에서
+`start_scheduler()`가 호출돼야 해요 (`lifespan` 내부 — 기존과 동일).
+이벤트 루프 외부(예: `if __name__ == "__main__":` 직접 호출)에서는
+동작하지 않아요.
+
+---
+
+### [Phase 5] Prometheus + Grafana 모니터링 추가 (이후 제거됨)
 
 **날짜**: 2026-04-24
 **신규 파일**: `backend/app/metrics.py`, `monitoring/prometheus.yml`, `monitoring/grafana/**`
@@ -329,7 +502,7 @@ docker-compose up -d
 
 ---
 
-### [Phase 5] Streamable HTTP 스트리밍 (MCP 2025-03-26 표준)
+### [Phase 6] Streamable HTTP 스트리밍 (MCP 2025-03-26 표준)
 
 **날짜**: 2026-04-24
 **신규 파일**: `backend/app/routers/chat_stream.py`

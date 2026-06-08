@@ -1,15 +1,25 @@
 """
 백그라운드 자동 크롤링 스케줄러
+
+BackgroundScheduler(별도 스레드) → AsyncIOScheduler(uvicorn 이벤트 루프)로 전환:
+- sync 작업(subprocess 기반)은 스케줄러가 자동으로 run_in_executor로 위임
+- async 작업(scrape_weekly_meal 등)은 await로 직접 실행 — asyncio.run() 충돌 제거
+- warm_cache도 async def로 통일, 새 루프 생성 코드 삭제
 """
-from apscheduler.schedulers.background import BackgroundScheduler
+import asyncio
+import json
+import logging
+import os
+import subprocess
+from datetime import datetime
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+
 from .database import SessionLocal
 from . import crud
-import subprocess
-import json
-import os
-import asyncio
-from datetime import datetime
+
+log = logging.getLogger(__name__)
 
 # 크롤러 경로
 NOTICE_SCRAPER = "/mcp-servers/notice-mcp/scrapers/khu_scraper.py"
@@ -18,106 +28,96 @@ LIBRARY_SCRAPER = "/mcp-servers/library-mcp/scrapers/library_scraper.py"
 CLASSROOM_SCRAPER = "/mcp-servers/classroom-mcp/scrapers/crawl_classrooms.py"
 
 
-def _reindex_rag_category(category: str):
+def _reindex_rag_category(category: str) -> None:
     """RAG 인덱스 특정 카테고리 재인덱싱 (동기 래퍼)"""
     try:
-        import asyncio
         import sys
-        import os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
         from scripts.index_rag_data import run as run_indexer
         asyncio.run(run_indexer(category))
     except Exception as e:
-        print(f"⚠️ RAG 재인덱싱 실패 ({category}): {e}")
+        log.warning("RAG 재인덱싱 실패 (%s): %s", category, e)
 
 
-def sync_notices():
+# ── 동기 크롤러 작업 (subprocess 기반 — run_in_executor로 실행됨) ─────────────
+
+def sync_notices() -> None:
     """공지사항 동기화"""
-    print("🔄 공지사항 자동 크롤링 시작...")
+    log.info("공지사항 자동 크롤링 시작...")
     db = SessionLocal()
-    
     try:
         result = subprocess.run(
             ["python3", NOTICE_SCRAPER, "swedu", "20"],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
         )
-        
         if result.returncode == 0:
             posts = json.loads(result.stdout)
             new_count = sum(1 for post in posts if crud.create_notice_from_mcp(db, post))
-            print(f"✅ SW중심대학: {new_count}개 신규 공지")
+            log.info("SW중심대학: %d개 신규 공지", new_count)
             if new_count > 0:
                 _reindex_rag_category("notice")
-
     except Exception as e:
-        print(f"❌ 공지 크롤링 에러: {e}")
+        log.error("공지 크롤링 에러: %s", e)
     finally:
         db.close()
 
 
-def sync_meals():
+def sync_meals() -> None:
     """학식 메뉴 동기화"""
-    print("🔄 학식 메뉴 자동 크롤링 시작...")
+    log.info("학식 메뉴 자동 크롤링 시작...")
     db = SessionLocal()
-    
     try:
         today = datetime.now().strftime("%Y-%m-%d")
         result = subprocess.run(
             ["python3", MEAL_SCRAPER, today],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
         )
-        
         if result.returncode == 0:
             meals = json.loads(result.stdout)
             for meal in meals:
                 crud.create_meal(db, meal)
-            print(f"✅ 학식 메뉴: {len(meals)}개 업데이트")
+            log.info("학식 메뉴: %d개 업데이트", len(meals))
             if meals:
                 _reindex_rag_category("meal")
-
     except Exception as e:
-        print(f"❌ 학식 크롤링 에러: {e}")
+        log.error("학식 크롤링 에러: %s", e)
     finally:
         db.close()
 
 
-def sync_library_seats():
+def sync_library_seats() -> None:
     """도서관 좌석 동기화"""
-    print("🔄 도서관 좌석 자동 크롤링 시작...")
+    log.info("도서관 좌석 자동 크롤링 시작...")
     db = SessionLocal()
-
     try:
         result = subprocess.run(
             ["python3", LIBRARY_SCRAPER],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
         )
-
         if result.returncode == 0:
             data = json.loads(result.stdout)
-            # 스크래퍼는 {"seats": [...], "success": bool, ...} 형태를 반환
             seats = data.get("seats", []) if isinstance(data, dict) else data
             if seats:
                 crud.update_library_seats(db, seats)
-                print(f"✅ 도서관 좌석: {len(seats)}개 업데이트")
+                log.info("도서관 좌석: %d개 업데이트", len(seats))
             else:
                 msg = data.get("message", "좌석 정보 없음") if isinstance(data, dict) else "좌석 정보 없음"
-                print(f"⚠️ 도서관 좌석 업데이트 건너뜀: {msg}")
-
+                log.info("도서관 좌석 업데이트 건너뜀: %s", msg)
     except Exception as e:
-        print(f"❌ 도서관 크롤링 에러: {e}")
+        log.error("도서관 크롤링 에러: %s", e)
     finally:
         db.close()
 
 
-def sync_classrooms():
+def sync_classrooms() -> None:
     """강의실/교수연구실 정보 동기화 (2개월 주기)"""
-    print("🔄 강의실/연구실 자동 크롤링 시작...")
+    log.info("강의실/연구실 자동 크롤링 시작...")
     try:
         result = subprocess.run(
             ["python3", CLASSROOM_SCRAPER],
@@ -125,210 +125,147 @@ def sync_classrooms():
             text=True,
             timeout=60,
         )
-
         if result.returncode == 0:
-            print(f"✅ 강의실 크롤링 결과: {result.stdout.strip()}")
+            log.info("강의실 크롤링 결과: %s", result.stdout.strip())
         else:
-            print(f"❌ 강의실 크롤링 실패: {result.stderr}")
-
+            log.error("강의실 크롤링 실패: %s", result.stderr)
     except Exception as e:
-        print(f"❌ 강의실 크롤링 에러: {e}")
+        log.error("강의실 크롤링 에러: %s", e)
 
 
-def sync_curriculum():
+def sync_curriculum() -> None:
     """졸업요건 동기화"""
-    print("\n" + "="*60)
-    print(f"🔄 졸업요건 자동 업데이트 시작: {datetime.now()}")
-    print("="*60)
-    
+    log.info("졸업요건 자동 업데이트 시작: %s", datetime.now())
     try:
         from .routers.curriculum import sync_curriculum_data, load_curriculum_from_mcp
-        
-        # 1. MCP 데이터 동기화
+
         sync_result = sync_curriculum_data()
-        print(f"  📡 Sync 결과: {sync_result}")
-        
-        # 2. DB에 저장
+        log.info("Sync 결과: %s", sync_result)
+
         db = SessionLocal()
         try:
             load_result = load_curriculum_from_mcp(db)
-            print(f"  💾 Load 결과: {load_result}")
+            log.info("Load 결과: %s", load_result)
         finally:
             db.close()
-        
-        print(f"✅ 졸업요건 업데이트 완료: {datetime.now()}")
-        print("="*60 + "\n")
-        
+
+        log.info("졸업요건 업데이트 완료: %s", datetime.now())
     except Exception as e:
-        print(f"❌ 졸업요건 업데이트 실패: {e}")
-        import traceback
-        traceback.print_exc()
+        log.error("졸업요건 업데이트 실패: %s", e)
 
 
-def sync_weekly_meal():
-    """주간 식단표 스크래핑 (매주 월요일 09:00)"""
-    print("\n" + "="*60)
-    print(f"🍽️  주간 식단표 자동 업데이트 시작: {datetime.now()}")
-    print("="*60)
-    
+# ── 비동기 작업 (이전에는 asyncio.run()으로 새 루프 생성 → 이제 직접 await) ──
+
+async def sync_weekly_meal() -> None:
+    """주간 식단표 스크래핑 (매주 월요일 09:00)
+
+    이전: def sync_weekly_meal() + asyncio.run(scrape_weekly_meal()) → 새 루프 생성
+    현재: async def → uvicorn 루프에서 직접 await — 루프 충돌 제거
+    """
+    log.info("주간 식단표 자동 업데이트 시작: %s", datetime.now())
     try:
-        # 환경변수에서 API 키 가져오기
         api_key = os.getenv("ANTHROPIC_API_KEY")
-        
         if not api_key:
-            print("  ❌ ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다")
+            log.error("ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다")
             return
-        
-        # scraper 직접 호출
+
         import sys
         sys.path.append("/app/../mcp-servers/meal-mcp")
-        
-        from scraper import scrape_weekly_meal
-        
-        # asyncio.run으로 비동기 함수 실행
-        result = asyncio.run(scrape_weekly_meal(api_key))
-        
+        from scraper import scrape_weekly_meal  # type: ignore[import]
+
+        result = await scrape_weekly_meal(api_key)  # ← asyncio.run() 대신 await
+
         if result.get("success"):
-            print("  ✅ 주간 식단표 스크래핑 완료")
-            print(f"  📅 주간 시작: {result.get('week_start')}")
-            print(f"  📦 캐시된 일수: {result.get('cached_days')}일")
+            log.info(
+                "주간 식단표 완료: week_start=%s, cached_days=%s일",
+                result.get("week_start"),
+                result.get("cached_days"),
+            )
         else:
-            print(f"  ❌ 스크래핑 실패: {result.get('message')}")
-        
-        print(f"✅ 주간 식단표 업데이트 완료: {datetime.now()}")
-        print("="*60 + "\n")
-        
+            log.error("주간 식단표 스크래핑 실패: %s", result.get("message"))
     except Exception as e:
-        print(f"❌ 주간 식단표 업데이트 실패: {e}")
-        import traceback
-        traceback.print_exc()
+        log.error("주간 식단표 업데이트 실패: %s", e)
 
 
-def shutdown_scheduler():
+async def warm_cache() -> None:
+    """Redis 연결 상태 확인
+
+    이전: def warm_cache() + asyncio.new_event_loop() → 불필요한 루프 생성
+    현재: async def → uvicorn 루프에서 직접 실행
+    """
+    log.debug("캐시 연결 확인...")
+    try:
+        from .cache import cache_manager
+        await cache_manager.connect()
+        log.debug("Redis 연결 확인 완료")
+    except Exception as e:
+        log.warning("캐시 확인 실패: %s", e)
+
+
+# ── 스케줄러 관리 ─────────────────────────────────────────────────────────────
+
+_scheduler: AsyncIOScheduler | None = None  # type: ignore[assignment]
+
+
+def start_scheduler() -> None:
+    """AsyncIOScheduler 시작 (uvicorn 이벤트 루프에 바인딩)"""
+    global _scheduler
+    _scheduler = AsyncIOScheduler()
+
+    # 공지사항: 1시간마다 (sync → run_in_executor)
+    _scheduler.add_job(sync_notices, IntervalTrigger(hours=1),
+                       id="sync_notices_job", name="공지사항 자동 크롤링")
+
+    # 학식: 매일 07시, 11시, 17시 (sync → run_in_executor)
+    _scheduler.add_job(sync_meals, "cron", hour="7,11,17",
+                       id="sync_meals_job", name="학식 메뉴 자동 크롤링")
+
+    # 도서관: 10분마다 (sync → run_in_executor)
+    _scheduler.add_job(sync_library_seats, IntervalTrigger(minutes=10),
+                       id="sync_library_job", name="도서관 좌석 자동 크롤링")
+
+    # 강의실/연구실: 2개월마다 (sync → run_in_executor)
+    _scheduler.add_job(sync_classrooms, IntervalTrigger(days=60),
+                       id="sync_classrooms_job", name="강의실/연구실 자동 크롤링")
+
+    # 졸업요건: 매주 일요일 오전 2시 (sync → run_in_executor)
+    _scheduler.add_job(sync_curriculum, "cron", day_of_week="6", hour=2, minute=0,
+                       id="sync_curriculum_job", name="졸업요건 자동 업데이트")
+
+    # 주간 식단표: 매주 월요일 오전 9시 (async — 직접 await)
+    _scheduler.add_job(sync_weekly_meal, "cron", day_of_week="0", hour=9, minute=0,
+                       id="sync_weekly_meal_job", name="주간 식단표 자동 업데이트")
+
+    # 캐시 워밍업: 1시간마다 (async — 직접 await)
+    _scheduler.add_job(warm_cache, IntervalTrigger(hours=1),
+                       id="warm_cache_job", name="캐시 워밍업")
+
+    # 서버 시작 시 즉시 실행
+    _scheduler.add_job(sync_notices, "date", id="sync_notices_startup")
+    _scheduler.add_job(sync_meals, "date", id="sync_meals_startup")
+    _scheduler.add_job(sync_library_seats, "date", id="sync_library_startup")
+    _scheduler.add_job(sync_weekly_meal, "date", id="sync_weekly_meal_startup")
+    _scheduler.add_job(warm_cache, "date", id="warm_cache_startup")
+
+    _scheduler.start()
+    log.info(
+        "백그라운드 스케줄러 시작 (AsyncIOScheduler)\n"
+        "  - 공지사항: 1시간마다\n"
+        "  - 학식 메뉴: 07시, 11시, 17시\n"
+        "  - 도서관 좌석: 10분마다\n"
+        "  - 강의실/연구실: 2개월마다\n"
+        "  - 졸업요건: 매주 일요일 오전 2시\n"
+        "  - 주간 식단표: 매주 월요일 오전 9시\n"
+        "  - 캐시 워밍업: 1시간마다"
+    )
+
+
+def shutdown_scheduler() -> None:
     """스케줄러 종료"""
     global _scheduler
     if _scheduler and _scheduler.running:
         try:
             _scheduler.shutdown(wait=False)
-            print("✅ 스케줄러 종료 완료")
+            log.info("스케줄러 종료 완료")
         except Exception as e:
-            print(f"⚠️ 스케줄러 종료 중 오류: {e}")
-
-# scheduler.py 맨 아래에 추가 (shutdown_scheduler 함수 뒤)
-
-def warm_cache():
-    """Redis 연결 상태 확인
-
-    MCP 툴 캐싱은 main.py 워밍업(curriculum, classroom)과
-    tool_executor 레이어(첫 호출 후 자동 캐시)가 담당한다.
-    APScheduler 스레드에서 subprocess를 생성하면 uvicorn 메인 루프와
-    충돌(Racing with another loop)하므로 MCP 호출을 여기서 하지 않는다.
-    """
-    print("🔥 캐시 연결 확인...")
-
-    import asyncio
-    from .cache import cache_manager
-
-    async def _check():
-        await cache_manager.connect()
-        print("  ✅ Redis 연결 확인")
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(_check())
-    except Exception as e:
-        print(f"⚠️ 캐시 확인 실패: {e}")
-    finally:
-        loop.close()
-        asyncio.set_event_loop(None)
-
-
-# 전역 스케줄러 인스턴스 — shutdown_scheduler에서 참조
-_scheduler: BackgroundScheduler = None  # type: ignore[assignment]
-
-
-def start_scheduler():
-    """스케줄러 시작"""
-    global _scheduler
-    _scheduler = BackgroundScheduler()
-
-    # 공지사항: 1시간마다
-    _scheduler.add_job(
-        func=sync_notices,
-        trigger=IntervalTrigger(hours=1),
-        id='sync_notices_job',
-        name='공지사항 자동 크롤링'
-    )
-
-    # 학식: 매일 오전 7시, 11시, 오후 5시
-    _scheduler.add_job(
-        func=sync_meals,
-        trigger='cron',
-        hour='7,11,17',
-        id='sync_meals_job',
-        name='학식 메뉴 자동 크롤링'
-    )
-
-    # 도서관: 10분마다
-    _scheduler.add_job(
-        func=sync_library_seats,
-        trigger=IntervalTrigger(minutes=10),
-        id='sync_library_job',
-        name='도서관 좌석 자동 크롤링'
-    )
-
-    # 강의실/연구실: 2개월마다
-    _scheduler.add_job(
-        func=sync_classrooms,
-        trigger=IntervalTrigger(days=60),
-        id='sync_classrooms_job',
-        name='강의실/연구실 자동 크롤링'
-    )
-
-    # 졸업요건: 매주 일요일 오전 2시
-    _scheduler.add_job(
-        func=sync_curriculum,
-        trigger='cron',
-        day_of_week='6',
-        hour=2,
-        minute=0,
-        id='sync_curriculum_job',
-        name='졸업요건 자동 업데이트'
-    )
-
-    # 주간 식단표: 매주 월요일 오전 9시
-    _scheduler.add_job(
-        func=sync_weekly_meal,
-        trigger='cron',
-        day_of_week='0',
-        hour=9,
-        minute=0,
-        id='sync_weekly_meal_job',
-        name='주간 식단표 자동 업데이트'
-    )
-
-    # 캐시 워밍업: 1시간마다
-    _scheduler.add_job(
-        func=warm_cache,
-        trigger=IntervalTrigger(hours=1),
-        id='warm_cache_job',
-        name='캐시 워밍업'
-    )
-
-    # 서버 시작 시 즉시 실행
-    _scheduler.add_job(func=sync_notices, trigger='date', id='sync_notices_startup')
-    _scheduler.add_job(func=sync_meals, trigger='date', id='sync_meals_startup')
-    _scheduler.add_job(func=sync_library_seats, trigger='date', id='sync_library_startup')
-    _scheduler.add_job(func=sync_weekly_meal, trigger='date', id='sync_weekly_meal_startup')
-    _scheduler.add_job(func=warm_cache, trigger='date', id='warm_cache_startup')
-
-    _scheduler.start()
-    print("🚀 백그라운드 크롤링 스케줄러 시작")
-    print("  - 공지사항: 1시간마다")
-    print("  - 학식 메뉴: 07시, 11시, 17시")
-    print("  - 도서관 좌석: 10분마다")
-    print("  - 강의실/연구실: 2개월마다")
-    print("  - 졸업요건: 매주 일요일 오전 2시")
-    print("  - 주간 식단표: 매주 월요일 오전 9시")
-    print("  - 캐시 워밍업: 1시간마다")
+            log.warning("스케줄러 종료 중 오류: %s", e)

@@ -131,6 +131,7 @@ class MCPClient:
             "library":   self.mcp_dir / "library-mcp/server.py",
             "course":    self.mcp_dir / "course-mcp/server.py",
             "curriculum": self.mcp_dir / "curriculum-mcp/server.py",
+            "shuttle":   self.mcp_dir / "shuttle-mcp/server.py",
         }
         self.server_paths.update(paths)
 

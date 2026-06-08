@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 _client = AsyncAnthropic(api_key=get_settings().anthropic_api_key)
 _MODEL = "claude-sonnet-4-20250514"
-_MAX_ITERATIONS = 2
+_MAX_ITERATIONS = 8
 
 
 async def run_llm_agent(
