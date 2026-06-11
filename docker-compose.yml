@@ -83,7 +83,7 @@ services:
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/classroom-mcp/server.py
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8101/mcp || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8101/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -102,7 +102,7 @@ services:
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/notice-mcp/server.py
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8102/mcp || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8102/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -122,7 +122,7 @@ services:
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/meal-mcp/server.py
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8103/mcp || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8103/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -141,7 +141,7 @@ services:
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/library-mcp/server.py
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8104/mcp || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8104/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -166,7 +166,7 @@ services:
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/course-mcp/server.py
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8105/mcp || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8105/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -185,7 +185,7 @@ services:
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/curriculum-mcp/server.py
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8106/mcp || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8106/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -204,7 +204,7 @@ services:
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/shuttle-mcp/server.py
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8107/mcp || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8107/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
