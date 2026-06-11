@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-06-11T04:21:55.075256",
+  "created_at": "2026-06-11T04:39:33.548654",
   "week_start": "2026-06-08",
   "weekly_data": {
     "2026-06-08": {
@@ -33,7 +33,7 @@
         "date": "2026-06-09",
         "day": "화요일",
         "meal_type": "dinner",
-        "menu": "해물산적짜장덮밥",
+        "menu": "해물산적파절이덮밥",
         "price": 5000,
         "available": true
       }
@@ -51,7 +51,7 @@
         "date": "2026-06-10",
         "day": "수요일",
         "meal_type": "dinner",
-        "menu": "중심돈까스",
+        "menu": "등심돈까스",
         "price": 5000,
         "available": true
       }
@@ -69,7 +69,7 @@
         "date": "2026-06-11",
         "day": "목요일",
         "meal_type": "dinner",
-        "menu": "우삼겹순두부찌개",
+        "menu": "우삼겹순두부찜밥",
         "price": 5000,
         "available": true
       }
@@ -87,7 +87,7 @@
         "date": "2026-06-12",
         "day": "금요일",
         "meal_type": "dinner",
-        "menu": "매콤김치찜",
+        "menu": "매콤김치찜밥",
         "price": 5000,
         "available": true
       }

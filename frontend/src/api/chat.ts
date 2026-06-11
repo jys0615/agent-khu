@@ -15,6 +15,7 @@ export const sendMessageStream = async (
     longitude?: number,
     libraryUsername?: string,
     libraryPassword?: string,
+    sessionId?: string,
 ): Promise<void> => {
     const token = localStorage.getItem('token');
 
@@ -31,6 +32,7 @@ export const sendMessageStream = async (
             longitude,
             library_username: libraryUsername,
             library_password: libraryPassword,
+            session_id: sessionId,
         }),
     });
 

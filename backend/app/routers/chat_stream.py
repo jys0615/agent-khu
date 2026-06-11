@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from ..agent.complex_handler import run_llm_agent_stream # LLM 처리 함수
 from ..auth import get_current_user_optional # 로그인 안 해도 사용 가능 (선택적)
 from .. import models, schemas
+from ..cache import cache_manager
 
 log = logging.getLogger(__name__)
 
@@ -60,11 +61,16 @@ async def _stream_events(
 
     async def _run() -> None:
         try:
+            history = await cache_manager.get_conversation_history(session_id)
             result, tools_used = await run_llm_agent_stream(
                 message, latitude, longitude,
                 library_username, library_password,
                 current_user, on_event,
+                conversation_history=history,
             )
+            answer = result.get("message", "")
+            if answer:
+                await cache_manager.append_conversation_turn(session_id, message, answer)
             await queue.put({"type": "done", "result": result, "tools_used": tools_used})
         except Exception as e:
             log.error("Stream agent 에러: %s", e)
@@ -111,7 +117,7 @@ async def chat_stream(
     Streamable HTTP 채팅 엔드포인트.
     Accept 헤더가 text/event-stream이면 SSE 스트림, 그 외엔 JSON 단일 응답.
     """
-    session_id = str(uuid.uuid4())
+    session_id = body.session_id or str(uuid.uuid4())
     accept = request.headers.get("accept", "")
 
     if "text/event-stream" in accept:
@@ -139,11 +145,16 @@ async def chat_stream(
         async def noop(_event: dict) -> None:
             pass
 
+        history = await cache_manager.get_conversation_history(session_id)
         result, tools_used = await run_llm_agent_stream(
             body.message, body.latitude, body.longitude,
             body.library_username, body.library_password,
             current_user, noop,
+            conversation_history=history,
         )
+        answer = result.get("message", "")
+        if answer:
+            await cache_manager.append_conversation_turn(session_id, body.message, answer)
         return JSONResponse(content=result)
     except Exception as e:
         log.error("JSON 폴백 에러: %s", e)

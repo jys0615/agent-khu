@@ -86,6 +86,7 @@ const ChatInterface: React.FC = () => {
     const [showLibraryLogin, setShowLibraryLogin] = useState(false);
     const [libraryCredentials, setLibraryCredentials] = useState({ username: '', password: '' });
     const [pendingLibraryMessage, setPendingLibraryMessage] = useState('');
+    const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(undefined);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -131,6 +132,7 @@ const ChatInterface: React.FC = () => {
         setShowWelcome(true);
         setInputValue('');
         setShowLibraryLogin(false);
+        setCurrentSessionId(undefined);
         textareaRef.current?.focus();
     };
 
@@ -162,7 +164,9 @@ const ChatInterface: React.FC = () => {
             await sendMessageStream(
                 messageToSend,
                 (event) => {
-                    if (event.type === 'text') {
+                    if (event.type === 'connected') {
+                        setCurrentSessionId(prev => prev ?? event.session_id);
+                    } else if (event.type === 'text') {
                         setMessages(prev => prev.map(m =>
                             m.id === aiMsgId ? { ...m, text: m.text + event.delta } : m,
                         ));
@@ -244,6 +248,7 @@ const ChatInterface: React.FC = () => {
                 userLocation?.longitude,
                 withCredentials ? libraryCredentials.username : undefined,
                 withCredentials ? libraryCredentials.password : undefined,
+                currentSessionId,
             );
         } catch (err) {
             console.error('Stream error:', err);

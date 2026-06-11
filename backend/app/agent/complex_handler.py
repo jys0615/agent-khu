@@ -208,6 +208,7 @@ async def run_llm_agent_stream(
     library_password: Optional[str],
     current_user: Optional[models.User],
     on_event: EventCallback,
+    conversation_history: Optional[List[Dict]] = None,
 ) -> Tuple[Dict[str, Any], List[str]]:
     """
     Claude Tool-Use 루프 — 스트리밍 버전 (Streamable HTTP / Plan B)
@@ -216,7 +217,7 @@ async def run_llm_agent_stream(
     tool 실행 전후에 on_event("tool_start" / "tool_end")를 발생시킨다.
     """
     system_prompt = _make_system_prompt(message, current_user)
-    messages: List[Dict] = [{"role": "user", "content": message}]
+    messages: List[Dict] = list(conversation_history or []) + [{"role": "user", "content": message}]
     accumulated: AccumulatedResults = empty_accumulated()
     tools_used: List[str] = []
     final_message = None

@@ -274,6 +274,7 @@ class TokenResponse(BaseModel):
 # ChatRequest 수정 (기존 것 수정)
 class ChatRequest(BaseModel):
     message: str
+    session_id: Optional[str] = None  # 대화 세션 ID (없으면 신규 생성)
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     library_username: Optional[str] = None

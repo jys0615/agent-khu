@@ -191,6 +191,33 @@ class CacheManager:
         """get_info() alias — main.py /health 엔드포인트에서 호출"""
         return await self.get_info()
 
+    # ── 대화 히스토리 (세션 기억) ────────────────────────────────
+
+    _HISTORY_TTL = 1800  # 30분
+    _HISTORY_MAX_TURNS = 5  # 최근 N턴 보존
+
+    async def get_conversation_history(self, session_id: str) -> list[dict]:
+        """세션의 대화 히스토리 조회 (user/assistant 교대 메시지 목록)"""
+        data = await self.get(f"conv:{session_id}")
+        return data if isinstance(data, list) else []
+
+    async def append_conversation_turn(
+        self, session_id: str, user_msg: str, assistant_msg: str
+    ) -> None:
+        """대화 1턴(user + assistant) 추가. 최대 N턴 유지."""
+        history = await self.get_conversation_history(session_id)
+        history.append({"role": "user", "content": user_msg})
+        history.append({"role": "assistant", "content": assistant_msg})
+        # 최대 턴 수 초과 시 오래된 것부터 제거 (2개 = 1턴)
+        max_msgs = self._HISTORY_MAX_TURNS * 2
+        if len(history) > max_msgs:
+            history = history[-max_msgs:]
+        await self.set(f"conv:{session_id}", history, ttl=self._HISTORY_TTL)
+
+    async def clear_conversation(self, session_id: str) -> None:
+        """세션 대화 히스토리 초기화"""
+        await self.delete(f"conv:{session_id}")
+
 
 # 싱글톤 인스턴스
 cache_manager = CacheManager()
