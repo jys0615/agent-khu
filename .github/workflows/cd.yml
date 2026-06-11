@@ -6,130 +6,108 @@ on:
 
 permissions:
   contents: read
-  packages: write
+
+env:
+  ACR_NAME: agentkhuacr
+  RESOURCE_GROUP: agent-khu-rg
+  BACKEND_APP: agent-khu-backend
+  FRONTEND_APP: agent-khu-frontend
 
 jobs:
-  publish:
-    name: Publish Docker images
+  # ── 1. Build & Push images to ACR ────────────────────────────────────────
+  build-push:
+    name: Build & push images to ACR
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: az acr login --name $ACR_NAME
+
       - uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # ── Backend ─────────────────────────────────────────
-      - name: Extract backend image metadata
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/backend
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=,format=short
-
-      - name: Build and push backend image
+      # ── Backend ──────────────────────────────────────────
+      - name: Build & push backend
         uses: docker/build-push-action@v5
         with:
           context: .
           file: backend/Dockerfile
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
+          tags: ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       # ── Frontend ─────────────────────────────────────────
-      - name: Extract frontend image metadata
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/frontend
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=,format=short
-
-      - name: Build and push frontend image
+      - name: Build & push frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: frontend/Dockerfile
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
+          tags: ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/frontend:latest
           build-args: |
-            VITE_API_URL=/api
+            VITE_API_URL=https://${{ env.BACKEND_APP }}.$(az containerapp env show -n agent-khu-env -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv 2>/dev/null || echo 'placeholder')
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # job-level if 에서는 secrets 컨텍스트를 쓸 수 없으므로
-  # 별도 check 잡에서 출력값으로 전달
-  check-deploy:
-    name: Check deploy conditions
-    runs-on: ubuntu-latest
-    needs: publish
-    outputs:
-      should_deploy: ${{ steps.check.outputs.should_deploy }}
-    steps:
-      - name: Check KUBECONFIG secret
-        id: check
-        env:
-          KUBECONFIG_VAL: ${{ secrets.KUBECONFIG }}
-        run: |
-          if [ -n "$KUBECONFIG_VAL" ]; then
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_deploy=false" >> $GITHUB_OUTPUT
-            echo "⚠️  KUBECONFIG secret not set — skipping K8s deploy"
-          fi
-
+  # ── 2. Deploy to Azure Container Apps ────────────────────────────────────
   deploy:
-    name: Deploy to Kubernetes
+    name: Deploy to Azure Container Apps
     runs-on: ubuntu-latest
-    needs: check-deploy
-    timeout-minutes: 15
-    if: needs.check-deploy.outputs.should_deploy == 'true'
+    needs: build-push
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Configure kubeconfig
+      # ── Backend ──────────────────────────────────────────
+      - name: Deploy backend
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          az containerapp update \
+            --name $BACKEND_APP \
+            --resource-group $RESOURCE_GROUP \
+            --image $ACR_NAME.azurecr.io/backend:${{ github.sha }} \
+            --set-env-vars \
+              ANTHROPIC_API_KEY=secretref:anthropic-api-key \
+              GROQ_API_KEY=secretref:groq-api-key \
+              DATABASE_URL=secretref:database-url \
+              REDIS_URL=secretref:redis-url \
+              ELASTICSEARCH_URL=secretref:elasticsearch-url \
+              SECRET_KEY=secretref:secret-key \
+              ALLOWED_ORIGINS=secretref:allowed-origins \
+              MCP_CLASSROOM_URL=http://localhost:8101/mcp \
+              MCP_NOTICE_URL=http://localhost:8102/mcp \
+              MCP_MEAL_URL=http://localhost:8103/mcp \
+              MCP_LIBRARY_URL=http://localhost:8104/mcp \
+              MCP_COURSE_URL=http://localhost:8105/mcp \
+              MCP_CURRICULUM_URL=http://localhost:8106/mcp \
+              MCP_SHUTTLE_URL=http://localhost:8107/mcp \
+              OLLAMA_ENABLED=false
 
-      - name: Apply K8s manifests
+      # ── Frontend ─────────────────────────────────────────
+      - name: Deploy frontend
         run: |
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/configmap.yaml
+          az containerapp update \
+            --name $FRONTEND_APP \
+            --resource-group $RESOURCE_GROUP \
+            --image $ACR_NAME.azurecr.io/frontend:${{ github.sha }}
 
-          # Secrets must be created manually on the cluster beforehand.
-          # See: k8s/README.md for required secret names.
-
-          kubectl apply -f k8s/postgres/
-          kubectl apply -f k8s/redis/
-          kubectl apply -f k8s/backend/
-          kubectl apply -f k8s/frontend/
-          kubectl apply -f k8s/ingress.yaml
-
-      - name: Rollout restart (pull latest images)
+      - name: Print deployment URLs
         run: |
-          kubectl rollout restart deployment/backend  -n agent-khu
-          kubectl rollout restart deployment/frontend -n agent-khu
-
-      - name: Wait for rollout
-        run: |
-          kubectl rollout status deployment/backend  -n agent-khu --timeout=120s
-          kubectl rollout status deployment/frontend -n agent-khu --timeout=120s
+          echo "=== Deployment complete ==="
+          BACKEND_URL=$(az containerapp show -n $BACKEND_APP -g $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+          FRONTEND_URL=$(az containerapp show -n $FRONTEND_APP -g $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Backend:  https://$BACKEND_URL"
+          echo "Frontend: https://$FRONTEND_URL"

@@ -1,0 +1,192 @@
+# 프로덕션 구성 — Azure 관리형 서비스 연결, Ollama 제거
+# 로컬 개발: docker-compose.yml 사용
+# Azure 배포: GitHub Actions CD 파이프라인 사용 (azure/setup.sh로 인프라 생성 후)
+#
+# 로컬 프로덕션 테스트:
+#   DATABASE_URL=... REDIS_URL=... docker compose -f docker-compose.prod.yml up
+
+services:
+  # ── MCP 서버 7개 ─────────────────────────────────────────────────────────
+
+  mcp-classroom:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "8101"
+      BACKEND_PATH: /app
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+    ports: ["8101:8101"]
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/classroom-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8101/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-notice:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "8102"
+      BACKEND_PATH: /app
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+    ports: ["8102:8102"]
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/notice-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8102/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-meal:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "8103"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY}
+    ports: ["8103:8103"]
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/meal-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8103/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-library:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "8104"
+    ports: ["8104:8104"]
+    volumes:
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/library-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8104/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-course:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "8105"
+      BACKEND_PATH: /app
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+    ports: ["8105:8105"]
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/course-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8105/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-curriculum:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "8106"
+    ports: ["8106:8106"]
+    volumes:
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/curriculum-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8106/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-shuttle:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "8107"
+    ports: ["8107:8107"]
+    volumes:
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/shuttle-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST http://localhost:8107/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Backend ───────────────────────────────────────────────────────────────
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:?set REDIS_URL}
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:?set ELASTICSEARCH_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://agent-khu-frontend.azurecontainerapps.io}
+      OLLAMA_ENABLED: "false"          # Azure에서 Ollama 미사용 → Groq fallback
+      MCP_CLASSROOM_URL: http://mcp-classroom:8101/mcp
+      MCP_NOTICE_URL: http://mcp-notice:8102/mcp
+      MCP_MEAL_URL: http://mcp-meal:8103/mcp
+      MCP_LIBRARY_URL: http://mcp-library:8104/mcp
+      MCP_COURSE_URL: http://mcp-course:8105/mcp
+      MCP_CURRICULUM_URL: http://mcp-curriculum:8106/mcp
+      MCP_SHUTTLE_URL: http://mcp-shuttle:8107/mcp
+    ports: ["8000:8000"]
+    depends_on:
+      mcp-classroom:
+        condition: service_healthy
+      mcp-notice:
+        condition: service_healthy
+      mcp-meal:
+        condition: service_healthy
+      mcp-library:
+        condition: service_healthy
+      mcp-course:
+        condition: service_healthy
+      mcp-curriculum:
+        condition: service_healthy
+      mcp-shuttle:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: sh -c "python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports: ["80:80"]
