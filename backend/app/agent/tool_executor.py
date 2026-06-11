@@ -110,9 +110,6 @@ async def process_tool_call(
         elif tool_name == "crawl_fresh_notices":
             result = await _handle_crawl_fresh_notices(tool_input)
         
-        elif tool_name == "search_meals":
-            result = await _handle_search_meals(tool_input)
-        
         elif tool_name == "get_next_shuttle":
             result = await _handle_get_next_shuttle(tool_input)
         
@@ -143,7 +140,7 @@ async def process_tool_call(
         elif tool_name == "reserve_seat":
             result = await _handle_reserve_seat(tool_input, library_username, library_password, current_user)
         
-        elif tool_name == "get_today_meal":
+        elif tool_name == "get_today_meal_tool":
             result = await _handle_get_today_meal(tool_input)
         
         elif tool_name == "get_cafeteria_info":
@@ -282,10 +279,9 @@ async def _handle_get_latest_notices(tool_input: dict, current_user: Optional[mo
     except Exception as e:
         log.warning("크롤링 예외 발생 (DB 데이터로 대체): %s", e)
     
-    # DB에서 조회
+    # DB에서 조회 (source는 MCP 툴 스키마에 없으므로 department만 전달)
     result = await mcp_client.call_tool("notice", "get_latest_notices", {
         "department": department,
-        "source": source,
         "limit": limit
     })
     
@@ -573,7 +569,7 @@ async def _handle_reserve_seat(tool_input: dict, library_username: Optional[str]
 async def _handle_get_today_meal(tool_input: dict):
     meal_type = tool_input.get("meal_type", "lunch")
     try:
-        result = await mcp_client.call_tool("meal", "get_today_meal", {"meal_type": meal_type}, timeout=5.0)
+        result = await mcp_client.call_tool("meal", "get_today_meal_tool", {"meal_type": meal_type}, timeout=60.0)
         parsed = json.loads(result) if isinstance(result, str) else result
         
         # 에러 응답인 경우 빈 배열 반환

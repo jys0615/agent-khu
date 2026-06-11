@@ -65,18 +65,6 @@ tools = [
         "annotations": {"readOnly": True, "destructive": False},
     },
     {
-        "name": "search_meals",
-        "description": "특정 메뉴가 나오는 날을 검색합니다",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "검색할 메뉴"}
-            },
-            "required": ["query"]
-        },
-        "annotations": {"readOnly": True, "destructive": False},
-    },
-    {
         "name": "get_next_shuttle",
         "description": "다음 셔틀버스 시간을 조회합니다",
         "input_schema": {
@@ -222,7 +210,7 @@ tools = [
         "annotations": {"readOnly": False, "destructive": False},
     },
     {
-        "name": "get_today_meal",
+        "name": "get_today_meal_tool",
         "description": "오늘의 학식 메뉴를 조회합니다",
         "input_schema": {
             "type": "object",
@@ -252,5 +240,5 @@ CACHE_TTL = {
     "get_seat_availability": 60,
     "get_next_shuttle": 300,
     "get_cafeteria_info": 86400,
-    "get_today_meal": 3600,
+    "get_today_meal_tool": 3600,
 }

@@ -121,6 +121,7 @@ services:
     container_name: agent-khu-mcp-meal
     environment:
       PORT: "8103"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set-in-env}
     ports:
       - "8103:8103"
     volumes:

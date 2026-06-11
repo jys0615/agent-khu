@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-06-11T03:48:49.289771",
+  "created_at": "2026-06-11T04:21:55.075256",
   "week_start": "2026-06-08",
   "weekly_data": {
     "2026-06-08": {
@@ -7,16 +7,16 @@
         "date": "2026-06-08",
         "day": "월요일",
         "meal_type": "lunch",
-        "menu": "치킨도리아&감자튀김",
-        "price": 5500,
+        "menu": "돈육김치찌개",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-06-08",
         "day": "월요일",
         "meal_type": "dinner",
-        "menu": "간장돼지불고기",
-        "price": 6500,
+        "menu": "참치마요덮밥",
+        "price": 5000,
         "available": true
       }
     },
@@ -25,16 +25,16 @@
         "date": "2026-06-09",
         "day": "화요일",
         "meal_type": "lunch",
-        "menu": "우삼겹된장찌개",
-        "price": 5500,
+        "menu": "아비꼬비프카레",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-06-09",
         "day": "화요일",
         "meal_type": "dinner",
-        "menu": "통모짜돈까스",
-        "price": 6500,
+        "menu": "해물산적짜장덮밥",
+        "price": 5000,
         "available": true
       }
     },
@@ -43,16 +43,16 @@
         "date": "2026-06-10",
         "day": "수요일",
         "meal_type": "lunch",
-        "menu": "순두부김치제육",
-        "price": 5500,
+        "menu": "우거지해장국",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-06-10",
         "day": "수요일",
         "meal_type": "dinner",
-        "menu": "통등심돈까스",
-        "price": 6500,
+        "menu": "중심돈까스",
+        "price": 5000,
         "available": true
       }
     },
@@ -61,16 +61,16 @@
         "date": "2026-06-11",
         "day": "목요일",
         "meal_type": "lunch",
-        "menu": "소고기무국",
-        "price": 5500,
+        "menu": "고추장제육볶음",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-06-11",
         "day": "목요일",
         "meal_type": "dinner",
-        "menu": "크림뽀끄리파스타",
-        "price": 6500,
+        "menu": "우삼겹순두부찌개",
+        "price": 5000,
         "available": true
       }
     },
@@ -79,16 +79,16 @@
         "date": "2026-06-12",
         "day": "금요일",
         "meal_type": "lunch",
-        "menu": "돈도리탕",
-        "price": 5500,
+        "menu": "소고기무국",
+        "price": 5000,
         "available": true
       },
       "dinner": {
         "date": "2026-06-12",
         "day": "금요일",
         "meal_type": "dinner",
-        "menu": "매콤찜닭덮밥",
-        "price": 6500,
+        "menu": "매콤김치찜",
+        "price": 5000,
         "available": true
       }
     }
