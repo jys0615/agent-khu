@@ -1,108 +1,64 @@
-"""Notice MCP Server - official MCP server SDK version."""
-import asyncio
-import json
+"""
+Notice MCP Server — FastMCP + Streamable HTTP (Phase 2)
+공지사항 검색 및 크롤링
+"""
+import os
 import sys
 from pathlib import Path
-from typing import Optional
 
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from fastmcp import FastMCP
 
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-import service
+import service  # noqa: E402
+
+PORT = int(os.getenv("PORT", "8102"))
+mcp = FastMCP("notice-mcp")
 
 
-server = Server("notice-mcp")
+@mcp.tool()
+async def get_latest_notices(department: str = "소프트웨어융합학과", limit: int = 5) -> dict:
+    """학과별 최신 공지사항 조회
+
+    Args:
+        department: 학과명 또는 코드 (기본값: 소프트웨어융합학과)
+        limit: 조회할 공지 수 (기본값: 5)
+    """
+    _, result = service.list_latest_notices(department, limit)
+    return result
 
 
-def json_content(payload) -> list:
-    """Return MCP TextContent with JSON mime type."""
-    return [TextContent(type="text", text=json.dumps(payload, ensure_ascii=False), mimeType="application/json")]
+@mcp.tool()
+async def search_notices(query: str, limit: int = 5, department: str = "") -> dict:
+    """공지사항 키워드 검색
+
+    Args:
+        query: 검색 키워드
+        limit: 최대 결과 수 (기본값: 5)
+        department: 학과 필터 (비워두면 전체 검색)
+    """
+    result = service.search_notices(query, limit, department or None)
+    return result
 
 
-@server.list_tools()
-async def list_tools() -> list[Tool]:
-    return [
-        Tool(
-            name="get_latest_notices",
-            description="학과별 최신 공지 (학과명 또는 코드)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "department": {"type": "string"},
-                    "limit": {"type": "integer"},
-                },
-            },
-        ),
-        Tool(
-            name="search_notices",
-            description="공지사항 키워드 검색",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer"},
-                    "department": {"type": "string"},
-                },
-                "required": ["query"],
-            },
-        ),
-        Tool(
-            name="crawl_fresh_notices",
-            description="학과 공지 크롤링 (키워드 필터 지원)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "department": {"type": "string"},
-                    "limit": {"type": "integer"},
-                    "keyword": {"type": "string"},
-                },
-            },
-        ),
-    ]
+@mcp.tool()
+async def crawl_fresh_notices(
+    department: str = "소프트웨어융합학과",
+    limit: int = 20,
+    keyword: str = "",
+) -> dict:
+    """학과 공지 실시간 크롤링 (키워드 필터 지원)
 
-
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    try:
-        if name == "get_latest_notices":
-            department = arguments.get("department", "소프트웨어융합학과")
-            limit = arguments.get("limit", 5)
-            _, result = service.list_latest_notices(department, limit)
-            return json_content(result)
-
-        if name == "search_notices":
-            query = arguments.get("query", "")
-            limit = arguments.get("limit", 5)
-            department = arguments.get("department")
-            result = service.search_notices(query, limit, department)
-            return json_content(result)
-
-        if name == "crawl_fresh_notices":
-            department = arguments.get("department", "소프트웨어융합학과")
-            limit = arguments.get("limit", 20)
-            keyword = arguments.get("keyword")
-            result = service.crawl_and_persist(department, limit, keyword)
-            return json_content(result)
-
-        return json_content({"error": {"type": "UnknownTool", "message": f"Unknown tool: {name}"}})
-
-    except Exception as e:
-        return json_content({"error": {"type": "ServerError", "message": str(e)}})
-
-
-async def main():
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options()
-        )
+    Args:
+        department: 학과명 (기본값: 소프트웨어융합학과)
+        limit: 크롤링할 최대 공지 수
+        keyword: 필터링 키워드 (비워두면 전체)
+    """
+    result = service.crawl_and_persist(department, limit, keyword or None)
+    return result
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    mcp.run(transport="http", host="0.0.0.0", port=PORT, stateless_http=True)

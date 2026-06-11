@@ -1,181 +1,107 @@
 """
-MCP 클라이언트 - 영구 세션 풀 (Phase 1 리팩토링)
+MCP 클라이언트 — HTTP 기반 (Phase 2 리팩토링)
 
-Before: call_tool() 호출마다 subprocess spawn + initialize(12s) + 종료
-After : 앱 startup에 1회 세션 생성 → 이후 모든 호출에서 재사용
-        실패 시 자동 재연결 1회 재시도 (_reconnect_lock으로 경합 방지)
+Before (Phase 1): 각 MCP 서버를 subprocess로 spawn → stdio transport
+After  (Phase 2): 각 MCP 서버가 독립 HTTP 프로세스 → Streamable HTTP transport
+
+변경 핵심:
+  - subprocess 관리 제거 (cold start 0ms)
+  - FastMCP Client로 HTTP 연결 (stateless, 서버당 독립 포트)
+  - start_all() / stop_all() → health check만 수행 (인터페이스 호환 유지)
+  - _parse_result() / discover_tools() / get_tools() 인터페이스 동일
 """
 from __future__ import annotations
 
-import os
-import sys
 import asyncio
+import json
 import logging
-from contextlib import AsyncExitStack
-from typing import Dict, Any, Optional
-from pathlib import Path
+import os
+from typing import Any, Dict, Optional
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from fastmcp import Client as FastMCPClient
 
 log = logging.getLogger(__name__)
 
 
-class MCPServerSession:
-    """개별 MCP 서버와의 영구 세션"""
+class MCPHTTPSession:
+    """개별 MCP HTTP 서버와의 연결 관리 (subprocess 없음)"""
 
-    def __init__(self, name: str, params: StdioServerParameters) -> None:
+    def __init__(self, name: str, url: str) -> None:
         self.name = name
-        self.params = params
-        self._session: Optional[ClientSession] = None
-        self._exit_stack = AsyncExitStack()
-        self._reconnect_lock = asyncio.Lock()
+        self.url = url
+        # 하위 호환: health check 시 True로 설정
+        self._session: Optional[bool] = None
 
-    async def start(self) -> None:
-        read, write = await self._exit_stack.enter_async_context(
-            stdio_client(self.params)
-        )
-        self._session = await self._exit_stack.enter_async_context(
-            ClientSession(read, write)
-        )
-        await asyncio.wait_for(self._session.initialize(), timeout=15.0)
-        log.info("MCP 세션 시작: %s", self.name)
-
-    async def stop(self) -> None:
+    async def check_health(self, timeout: float = 5.0) -> bool:
+        """서버 가용성 확인 (list_tools 호출)"""
         try:
-            await self._exit_stack.aclose()
+            async with FastMCPClient(self.url, timeout=timeout) as client:
+                await client.list_tools()
+            self._session = True
+            return True
         except Exception as e:
-            log.debug("MCP 세션 종료 중 오류 (%s): %s", self.name, e)
-        finally:
-            self._exit_stack = AsyncExitStack()
+            log.warning("MCP HTTP health check 실패 (%s): %s", self.name, e)
             self._session = None
-        log.info("MCP 세션 종료: %s", self.name)
+            return False
 
-    async def call_tool(self, tool_name: str, arguments: dict, timeout: float) -> Any:
-        # 세션 없으면 lazy start (startup 실패 서버 대비)
-        if self._session is None:
-            async with self._reconnect_lock:
-                if self._session is None:
-                    await self.start()
-
+    async def call_tool(self, tool_name: str, arguments: dict, timeout: float = 10.0) -> Any:
         try:
-            return await asyncio.wait_for(
-                self._session.call_tool(tool_name, arguments),
-                timeout=timeout,
-            )
+            async with FastMCPClient(self.url, timeout=timeout) as client:
+                return await client.call_tool(tool_name, arguments)
         except Exception as e:
-            log.warning("MCP tool 실패, 재연결 시도 (%s.%s): %s", self.name, tool_name, e)
-            async with self._reconnect_lock:
-                await self.stop()
-                await self.start()
-            return await asyncio.wait_for(
-                self._session.call_tool(tool_name, arguments),
-                timeout=timeout,
-            )
+            log.warning("MCP HTTP tool 실패 (%s.%s): %s", self.name, tool_name, e)
+            raise
+
+    async def list_tools(self) -> list:
+        async with FastMCPClient(self.url, init_timeout=5.0) as client:
+            return await client.list_tools()
 
 
 class MCPClient:
-    """영구 세션 풀 기반 MCP 클라이언트"""
+    """HTTP 기반 MCP 클라이언트 (Phase 2 — subprocess 완전 제거)"""
 
     def __init__(self) -> None:
-        self.server_paths: Dict[str, Path] = {}
-        self.server_params: Dict[str, StdioServerParameters] = {}
-        self._sessions: Dict[str, MCPServerSession] = {}
-        self._discovered_tools: list[dict] = []  # discover_tools() 호출 후 채워짐
+        self._sessions: Dict[str, MCPHTTPSession] = {}
+        self._discovered_tools: list[dict] = []
 
-        env_root = os.getenv("MCP_ROOT")
-        candidates = []
+        # 하위 호환 (health endpoint에서 참조)
+        self.server_params: Dict[str, dict] = {}
 
-        if env_root:
-            p = Path(env_root)
-            if p.exists():
-                candidates.append(p)
+        self._setup_sessions()
 
-        try:
-            repo_root = Path(__file__).resolve().parents[2]
-            candidates.append(repo_root / "mcp-servers")
-        except Exception:
-            pass
-
-        try:
-            cwd = Path(os.getcwd()).resolve()
-            candidates.append((cwd / "../mcp-servers").resolve())
-            candidates.append(cwd / "mcp-servers")
-        except Exception:
-            pass
-
-        candidates.append(Path.home() / "Desktop/agent-khu/mcp-servers")
-
-        root: Optional[Path] = None
-        for c in candidates:
-            try:
-                if c.exists():
-                    root = c.resolve()
-                    break
-            except Exception:
-                continue
-
-        if root is None:
-            root = candidates[-1]
-            log.warning("MCP 디렉터리를 찾지 못했습니다: %s", root)
-
-        self.mcp_dir = root
-        log.debug("MCP_DIR = %s", self.mcp_dir)
-
-        self._register_default_servers()
-
-    def _register_default_servers(self) -> None:
-        paths = {
-            "classroom": self.mcp_dir / "classroom-mcp/server.py",
-            "notice":    self.mcp_dir / "notice-mcp/server.py",
-            "meal":      self.mcp_dir / "meal-mcp/server.py",
-            "library":   self.mcp_dir / "library-mcp/server.py",
-            "course":    self.mcp_dir / "course-mcp/server.py",
-            "curriculum": self.mcp_dir / "curriculum-mcp/server.py",
-            "shuttle":   self.mcp_dir / "shuttle-mcp/server.py",
+    def _setup_sessions(self) -> None:
+        """MCP HTTP 서버 URL 설정 (env 우선, 기본값 localhost)"""
+        default_urls: Dict[str, str] = {
+            "classroom":  "http://localhost:8101/mcp",
+            "notice":     "http://localhost:8102/mcp",
+            "meal":       "http://localhost:8103/mcp",
+            "library":    "http://localhost:8104/mcp",
+            "course":     "http://localhost:8105/mcp",
+            "curriculum": "http://localhost:8106/mcp",
+            "shuttle":    "http://localhost:8107/mcp",
         }
-        self.server_paths.update(paths)
+        for name, default_url in default_urls.items():
+            url = os.getenv(f"MCP_{name.upper()}_URL", default_url)
+            self._sessions[name] = MCPHTTPSession(name, url)
+            self.server_params[name] = {"url": url}
+            log.debug("MCP HTTP 등록: %s → %s", name, url)
 
-        env = os.environ.copy()
-        try:
-            backend_root = Path(__file__).resolve().parents[1]
-            existing_pp = env.get("PYTHONPATH", "")
-            pp_parts = [p for p in existing_pp.split(os.pathsep) if p]
-            if str(backend_root) not in pp_parts:
-                pp_parts.append(str(backend_root))
-            env["PYTHONPATH"] = os.pathsep.join(pp_parts) if pp_parts else str(backend_root)
-            env.setdefault("PYTHONUNBUFFERED", "1")
-        except Exception:
-            pass
-
-        python_cmd = sys.executable or "python3"
-
-        for name, path in paths.items():
-            if path.exists():
-                self.server_params[name] = StdioServerParameters(
-                    command=python_cmd,
-                    args=[str(path)],
-                    env=env,
-                )
-                self._sessions[name] = MCPServerSession(name, self.server_params[name])
+    # ── 라이프사이클 ──────────────────────────────────────────────────────────
 
     async def start_all(self) -> None:
-        """앱 startup 시 모든 MCP 서버 세션을 동시에 시작"""
+        """앱 startup 시 모든 HTTP 서버 가용성 확인"""
         results = await asyncio.gather(
-            *[s.start() for s in self._sessions.values()],
+            *[s.check_health() for s in self._sessions.values()],
             return_exceptions=True,
         )
-        for name, result in zip(self._sessions.keys(), results):
-            if isinstance(result, Exception):
-                log.warning("MCP 세션 시작 실패 (%s): %s — lazy start로 대체", name, result)
+        ok = sum(1 for r in results if r is True)
+        log.info("MCP HTTP 서버 가용성 확인: %d/%d 정상", ok, len(self._sessions))
 
     async def stop_all(self) -> None:
-        """앱 shutdown 시 모든 세션 종료"""
-        await asyncio.gather(
-            *[s.stop() for s in self._sessions.values()],
-            return_exceptions=True,
-        )
-        log.info("MCP Client 전체 종료 완료")
+        """HTTP 서버는 독립 프로세스 — 클라이언트 측 종료 처리 없음"""
+        log.info("MCP HTTP Client 종료 (서버 프로세스는 독립 실행)")
+
+    # ── Tool 실행 ─────────────────────────────────────────────────────────────
 
     async def call_tool(
         self,
@@ -184,35 +110,39 @@ class MCPClient:
         arguments: Dict[str, Any],
         *,
         timeout: float = 10.0,
-        retries: int = 1,  # API 호환성 유지 (내부 retry는 MCPServerSession에서 처리)
+        retries: int = 1,  # API 호환성 유지
     ) -> Any:
         session = self._sessions.get(server_name)
         if not session:
             raise ValueError(f"등록되지 않은 MCP 서버: {server_name}")
 
-        result = await session.call_tool(tool_name, arguments, timeout)
-        return self._parse_result(result)
+        try:
+            result = await session.call_tool(tool_name, arguments, timeout)
+            return self._parse_result(result)
+        except Exception:
+            if retries > 0:
+                log.warning("MCP 재시도 (%s.%s)", server_name, tool_name)
+                result = await session.call_tool(tool_name, arguments, timeout)
+                return self._parse_result(result)
+            raise
 
     def _parse_result(self, result: Any) -> Any:
-        """MCP 결과 파싱"""
-        if hasattr(result, 'content') and result.content:
+        """FastMCP CallToolResult → Python 객체 변환"""
+        if hasattr(result, "content") and result.content:
             if isinstance(result.content, list):
-                texts = []
-                for item in result.content:
-                    if hasattr(item, 'text'):
-                        texts.append(item.text)
-                    elif isinstance(item, dict) and 'text' in item:
-                        texts.append(item['text'])
+                texts = [
+                    item.text
+                    for item in result.content
+                    if hasattr(item, "text")
+                ]
                 if texts:
                     combined = "\n".join(texts)
                     try:
-                        import json
                         return json.loads(combined)
                     except json.JSONDecodeError:
                         return combined
-            if hasattr(result.content, 'text'):
+            if hasattr(result.content, "text"):
                 try:
-                    import json
                     return json.loads(result.content.text)
                 except json.JSONDecodeError:
                     return result.content.text
@@ -221,47 +151,43 @@ class MCPClient:
     # ── Tool Discovery ────────────────────────────────────────────────────────
 
     async def discover_tools(self) -> list[dict]:
-        """모든 MCP 서버에서 tool 목록을 동적으로 수집하고 내부에 캐시한다.
+        """모든 HTTP MCP 서버에서 tool 목록 동적 수집 후 캐시
 
-        MCP 스펙 준수: 서버가 자신의 capability를 선언하고,
-        클라이언트는 startup 시 list_tools()로 동적 discovery.
-        tools_definition.py 하드코딩 방식 대체.
-
-        Returns:
-            Claude API 형식의 tool dict 리스트
-            [{"name": str, "description": str, "input_schema": dict}, ...]
+        Phase 2 변경: list_tools()가 HTTP 요청으로 처리 (subprocess 없음)
+        inputSchema(camelCase) → input_schema(snake_case) 변환은 Claude API 요구사항
         """
-        discovered: dict[str, dict] = {}  # name → tool dict (중복 방지)
+        discovered: dict[str, dict] = {}
 
         for name, session in self._sessions.items():
             try:
-                # 세션이 없으면 lazy start
-                if session._session is None:
-                    await session.start()
-                result = await session._session.list_tools()
-                for tool in result.tools:
+                tools = await session.list_tools()
+                for tool in tools:
                     if tool.name not in discovered:
                         discovered[tool.name] = {
                             "name": tool.name,
                             "description": tool.description or "",
                             "input_schema": tool.inputSchema or {"type": "object", "properties": {}},
                         }
-                log.debug("Tool discovery: %s → %d tools", name, len(result.tools))
+                log.debug("Tool discovery: %s → %d tools", name, len(tools))
             except Exception as e:
                 log.warning("Tool discovery 실패 (%s): %s", name, e)
 
         self._discovered_tools = list(discovered.values())
-        log.info("Tool discovery 완료: 총 %d tools (%d 서버)",
-                 len(self._discovered_tools), len(self._sessions))
+        log.info(
+            "Tool discovery 완료: 총 %d tools (%d 서버)",
+            len(self._discovered_tools),
+            len(self._sessions),
+        )
         return self._discovered_tools
 
     def get_tools(self) -> list[dict]:
         """캐시된 tool 목록 반환. discover_tools() 호출 전이면 빈 리스트."""
         return self._discovered_tools
 
-    # ── Convenience wrappers ──────────────────────────────────────────────────
+    # ── Convenience wrappers (기존 호환) ─────────────────────────────────────
+
     async def meal_get_today(self, meal_type: str = "lunch") -> Any:
-        return await self.call_tool("meal", "get_today_meal", {"meal_type": meal_type})
+        return await self.call_tool("meal", "get_today_meal_tool", {"meal_type": meal_type})
 
     async def meal_scrape_weekly(self) -> Any:
         return await self.call_tool("meal", "scrape_weekly_meal", {})
@@ -271,17 +197,17 @@ class MCPClient:
 
     async def library_seats(self, username: str, password: str, campus: str = "seoul") -> Any:
         return await self.call_tool("library", "get_seat_availability", {
-            "username": username, "password": password, "campus": campus
+            "username": username, "password": password, "campus": campus,
         })
 
     async def library_reserve(self, username: str, password: str, room: str, seat_number: str | None = None) -> Any:
-        payload = {"username": username, "password": password, "room": room}
+        payload: dict = {"username": username, "password": password, "room": room}
         if seat_number:
             payload["seat_number"] = seat_number
         return await self.call_tool("library", "reserve_seat", payload)
 
     async def course_search(self, department: str = "소프트웨어융합학과", keyword: str | None = None) -> Any:
-        payload = {"department": department}
+        payload: dict = {"department": department}
         if keyword:
             payload["keyword"] = keyword
         return await self.call_tool("course", "search_courses", payload)

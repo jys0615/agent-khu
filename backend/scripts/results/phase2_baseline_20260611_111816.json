@@ -1,0 +1,264 @@
+{
+  "summary": {
+    "measured_at": "2026-06-11T11:18:16",
+    "transport": "stdio",
+    "phase": "before_phase2",
+    "mcp_servers_registered": [
+      "classroom",
+      "notice",
+      "meal",
+      "library",
+      "course",
+      "curriculum",
+      "shuttle"
+    ],
+    "cold_start": {
+      "avg_ms": 293,
+      "median_ms": 322,
+      "min_ms": 209,
+      "max_ms": 382,
+      "success_count": 7,
+      "total_count": 7
+    },
+    "tool_latency_warm": {
+      "avg_ms": 34,
+      "median_ms": 2,
+      "min_ms": 1,
+      "max_ms": 274,
+      "sample_count": 10
+    },
+    "subprocess_memory": {
+      "subprocess_count": 7,
+      "total_children_rss_mib": 478.1,
+      "mcp_subprocess_rss_mib": 478.1
+    },
+    "tool_discovery_ms": 7,
+    "tool_count": 20,
+    "concurrent_3tools_ms": 4
+  },
+  "detail": {
+    "cold_start": {
+      "classroom": {
+        "latency_ms": 370,
+        "success": true
+      },
+      "notice": {
+        "latency_ms": 382,
+        "success": true
+      },
+      "meal": {
+        "latency_ms": 322,
+        "success": true
+      },
+      "library": {
+        "latency_ms": 212,
+        "success": true
+      },
+      "course": {
+        "latency_ms": 342,
+        "success": true
+      },
+      "curriculum": {
+        "latency_ms": 209,
+        "success": true
+      },
+      "shuttle": {
+        "latency_ms": 212,
+        "success": true
+      }
+    },
+    "tool_latency": {
+      "classroom": {
+        "calls": [
+          {
+            "tool": "search_classroom",
+            "latency_ms": 27,
+            "success": true
+          },
+          {
+            "tool": "search_classroom",
+            "latency_ms": 3,
+            "success": true
+          }
+        ],
+        "avg_ms": 15,
+        "min_ms": 3,
+        "max_ms": 27
+      },
+      "notice": {
+        "calls": [
+          {
+            "tool": "search_notices",
+            "latency_ms": 21,
+            "success": true
+          },
+          {
+            "tool": "search_notices",
+            "latency_ms": 11,
+            "success": true
+          }
+        ],
+        "avg_ms": 16,
+        "min_ms": 11,
+        "max_ms": 21
+      },
+      "meal": {
+        "calls": [
+          {
+            "tool": "get_today_meal",
+            "latency_ms": 2,
+            "success": true
+          },
+          {
+            "tool": "get_today_meal",
+            "latency_ms": 1,
+            "success": true
+          }
+        ],
+        "avg_ms": 2,
+        "min_ms": 1,
+        "max_ms": 2
+      },
+      "library": {
+        "calls": [
+          {
+            "tool": "get_library_info",
+            "latency_ms": 2,
+            "success": true
+          }
+        ],
+        "avg_ms": 2,
+        "min_ms": 2,
+        "max_ms": 2
+      },
+      "curriculum": {
+        "calls": [
+          {
+            "tool": "search_curriculum",
+            "latency_ms": 1,
+            "success": true
+          }
+        ],
+        "avg_ms": 1,
+        "min_ms": 1,
+        "max_ms": 1
+      },
+      "course": {
+        "calls": [
+          {
+            "tool": "search_courses",
+            "latency_ms": 274,
+            "success": true
+          }
+        ],
+        "avg_ms": 274,
+        "min_ms": 274,
+        "max_ms": 274
+      },
+      "shuttle": {
+        "calls": [
+          {
+            "tool": "get_next_shuttle",
+            "latency_ms": 1,
+            "success": true
+          }
+        ],
+        "avg_ms": 1,
+        "min_ms": 1,
+        "max_ms": 1
+      }
+    },
+    "memory": {
+      "classroom": {
+        "rss_mib": 80.5,
+        "pid": 46087,
+        "status": "ok"
+      },
+      "notice": {
+        "rss_mib": 83.7,
+        "pid": 46089,
+        "status": "ok"
+      },
+      "meal": {
+        "rss_mib": 62.3,
+        "pid": 46090,
+        "status": "ok"
+      },
+      "library": {
+        "rss_mib": 54.4,
+        "pid": 46091,
+        "status": "ok"
+      },
+      "course": {
+        "rss_mib": 86.8,
+        "pid": 46092,
+        "status": "ok"
+      },
+      "curriculum": {
+        "rss_mib": 55.4,
+        "pid": 46093,
+        "status": "ok"
+      },
+      "shuttle": {
+        "rss_mib": 55.1,
+        "pid": 46096,
+        "status": "ok"
+      },
+      "__summary__": {
+        "subprocess_count": 7,
+        "total_children_rss_mib": 478.1,
+        "mcp_subprocess_rss_mib": 478.1
+      }
+    },
+    "tool_discovery": {
+      "total_ms": 7,
+      "tool_count": 20,
+      "tools": [
+        "search_classroom",
+        "get_classroom_stats",
+        "get_latest_notices",
+        "search_notices",
+        "crawl_fresh_notices",
+        "get_today_meal",
+        "get_cafeteria_info",
+        "scrape_weekly_meal",
+        "get_library_info",
+        "get_seat_availability",
+        "reserve_seat",
+        "search_courses",
+        "get_professor_courses",
+        "get_course_by_code",
+        "search_curriculum",
+        "get_curriculum_by_semester",
+        "list_programs",
+        "get_requirements",
+        "evaluate_progress",
+        "get_next_shuttle"
+      ],
+      "success": true
+    },
+    "concurrent": {
+      "total_elapsed_ms": 4,
+      "calls": [
+        {
+          "server": "classroom",
+          "tool": "search_classroom",
+          "latency_ms": 4,
+          "success": true
+        },
+        {
+          "server": "meal",
+          "tool": "get_today_meal",
+          "latency_ms": 1,
+          "success": true
+        },
+        {
+          "server": "notice",
+          "tool": "search_notices",
+          "latency_ms": 4,
+          "success": true
+        }
+      ]
+    }
+  }
+}

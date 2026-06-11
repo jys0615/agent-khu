@@ -14,7 +14,8 @@ lxml==5.1.0
 playwright==1.40.0
 elasticsearch==8.11.0
 aiohttp==3.9.1
-mcp>=1.1.0
+mcp>=1.27.0
+fastmcp>=2.14.0,<3
 argon2-cffi==23.1.0
 beautifulsoup4==4.12.3
 apscheduler==3.10.4

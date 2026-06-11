@@ -62,6 +62,156 @@ services:
       retries: 5
       start_period: 30s
 
+  # ── MCP HTTP 서버 (Phase 2: stdio subprocess → Streamable HTTP) ───────────
+
+  mcp-classroom:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agent-khu-mcp-classroom
+    environment:
+      PORT: "8101"
+      BACKEND_PATH: /app
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_khu}
+    ports:
+      - "8101:8101"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/classroom-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8101/mcp || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-notice:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agent-khu-mcp-notice
+    environment:
+      PORT: "8102"
+    ports:
+      - "8102:8102"
+    volumes:
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/notice-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8102/mcp || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-meal:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agent-khu-mcp-meal
+    environment:
+      PORT: "8103"
+    ports:
+      - "8103:8103"
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/meal-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8103/mcp || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-library:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agent-khu-mcp-library
+    environment:
+      PORT: "8104"
+    ports:
+      - "8104:8104"
+    volumes:
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/library-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8104/mcp || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-course:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agent-khu-mcp-course
+    environment:
+      PORT: "8105"
+      BACKEND_PATH: /app
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_khu}
+    ports:
+      - "8105:8105"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/course-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8105/mcp || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-curriculum:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agent-khu-mcp-curriculum
+    environment:
+      PORT: "8106"
+    ports:
+      - "8106:8106"
+    volumes:
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/curriculum-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8106/mcp || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-shuttle:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agent-khu-mcp-shuttle
+    environment:
+      PORT: "8107"
+    ports:
+      - "8107:8107"
+    volumes:
+      - ./mcp-servers:/mcp-servers
+    command: python /mcp-servers/shuttle-mcp/server.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8107/mcp || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Backend ───────────────────────────────────────────────────────────────
+
   backend:
     build:
       context: .
@@ -71,11 +221,18 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_khu}
       REDIS_URL: redis://redis:6379
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      # Inject at runtime via .env or CI secrets; compose will fail fast if missing
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set-in-env}
       ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+      # Phase 2: MCP HTTP 서버 URL (docker 내부 서비스명으로 접근)
+      MCP_CLASSROOM_URL: http://mcp-classroom:8101/mcp
+      MCP_NOTICE_URL: http://mcp-notice:8102/mcp
+      MCP_MEAL_URL: http://mcp-meal:8103/mcp
+      MCP_LIBRARY_URL: http://mcp-library:8104/mcp
+      MCP_COURSE_URL: http://mcp-course:8105/mcp
+      MCP_CURRICULUM_URL: http://mcp-curriculum:8106/mcp
+      MCP_SHUTTLE_URL: http://mcp-shuttle:8107/mcp
     ports:
       - "8000:8000"
     depends_on:
@@ -84,6 +241,20 @@ services:
       redis:
         condition: service_healthy
       elasticsearch:
+        condition: service_healthy
+      mcp-classroom:
+        condition: service_healthy
+      mcp-notice:
+        condition: service_healthy
+      mcp-meal:
+        condition: service_healthy
+      mcp-library:
+        condition: service_healthy
+      mcp-course:
+        condition: service_healthy
+      mcp-curriculum:
+        condition: service_healthy
+      mcp-shuttle:
         condition: service_healthy
     volumes:
       - ./backend:/app

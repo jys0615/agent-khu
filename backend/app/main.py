@@ -171,7 +171,7 @@ async def health_check():
         "mcp_mode": "persistent_session_pool",
         "mcp_servers_available": list(mcp_client.server_params.keys()),
         "mcp_sessions_active": [
-            name for name, s in mcp_client._sessions.items() if s._session is not None
+            name for name, s in mcp_client._sessions.items() if s._session is True
         ],
     }
 
