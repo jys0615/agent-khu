@@ -1647,4 +1647,62 @@ mcp-shuttle    :8107/mcp
 - Python/Node.js 버전
 - 에러 메시지 전문
 - 재현 단계
+
+---
+
+## Phase 9 — MCP 서버 전체 안정화 (2026-06-11)
+
+### 진단 결과 요약
+
+7개 MCP 서버를 전수 검토한 결과:
+
+| MCP | 심각도 | 문제 | 조치 |
+|-----|--------|------|------|
+| course-mcp | 🔴 CRITICAL | CSS 셀렉터 추측값, goto 타임아웃 없음, 빈 배열 반환 | 셀렉터 범용화, 타임아웃 추가, fallback 응답 개선 |
+| notice-mcp | 🔴 HIGH | docker-compose에 BACKEND_PATH, DATABASE_URL 누락 | docker-compose 환경변수 추가, depends_on postgres 추가 |
+| library-mcp | 🟠 HIGH | 상대 import 실패 → scraper = None | sys.path 조작 후 절대 import로 변경 |
+| curriculum-mcp | 🟡 MEDIUM | 2021, 2022 입학년도 데이터 누락 | _resolve_year() 함수로 nearest year fallback 구현 |
+| meal-mcp | 🟡 MEDIUM | 모델명 `claude-opus-4-20250514` (존재하지 않음) | `claude-opus-4-5-20251101`로 수정 |
+| classroom-mcp | ✅ OK | 문제 없음 | - |
+| shuttle-mcp | ✅ OK | 정적 데이터, 문제 없음 | - |
+
+---
+
+### 트러블슈팅 상세
+
+#### 1. notice-mcp — BACKEND_PATH 누락
+**증상**: `from app.database import SessionLocal` → `ModuleNotFoundError`  
+**원인**: docker-compose.yml의 `mcp-notice` 서비스에 `BACKEND_PATH=/app`, `DATABASE_URL` 환경변수와 `volumes: ./backend:/app` 마운트가 없었음  
+**해결**: docker-compose.yml에 누락된 env + volume + `depends_on: postgres` 추가
+
+#### 2. library-mcp — 상대 import 실패
+**증상**: `get_seat_availability` 도구 호출 시 항상 `{"error": "scraper not available"}` 반환  
+**원인**: `service.py`에서 `from .scrapers.library_scraper import ...` 사용. 스크립트로 직접 실행(`python server.py`)하면 패키지 컨텍스트가 없어 상대 import 불가  
+**해결**: `sys.path`에 scrapers 디렉토리를 추가 후 `from library_scraper import ...` 절대 import로 변경
+
+#### 3. course-mcp — CSS 셀렉터 불일치
+**증상**: "현재 시간표 시스템에서 일시적으로 조회가 어려운 상황입니다" (항상)  
+**원인**: 
+- `wait_until="networkidle"` + goto 타임아웃 없음 → 복잡한 포털 사이트에서 무한 대기
+- `text=종합시간표`, `select#department`, `button#search`, `table.timetable` 등이 실제 사이트 DOM과 불일치
+- 실패 시 빈 배열 `[]` 반환 → Claude가 "조회 불가" 메시지 생성  
+**해결**:
+- `goto()` 옵션: `wait_until="domcontentloaded"`, `timeout=20000`으로 변경
+- Docker 환경 안정화: `--no-sandbox`, `--disable-dev-shm-usage` 플래그 추가
+- 셀렉터: `table.timetable` 고정값 → 가장 많은 행을 가진 table 자동 선택으로 범용화
+- 빈 결과 시 `{"available": False, "official_url": "https://sugang.khu.ac.kr/"}` 반환 → Claude가 공식 링크 안내하도록 유도
+
+#### 4. curriculum-mcp — 입학년도 데이터 갭
+**증상**: 2021, 2022년 입학생이 졸업요건 조회 시 `"데이터가 없습니다"` 반환  
+**원인**: JSON 데이터 파일에 2019, 2020, 2023, 2024, 2025 연도만 존재. 2021, 2022 누락  
+**해결**: `_resolve_year()` 함수 추가
+- 2021 → 2020 (직전 연도)
+- 2022 → 2023 (다음 연도)
+- 그 외: 가용 연도 중 가장 가까운 연도로 자동 매핑
+- 모든 연도 입력 함수(`get_requirements`, `list_programs`, `evaluate_progress`, `search_curriculum`)에 적용
+
+#### 5. meal-mcp — 잘못된 모델명
+**증상**: Vision API 호출 실패  
+**원인**: `claude-opus-4-20250514` (존재하지 않는 모델 ID)  
+**해결**: `claude-opus-4-5-20251101`로 수정
 - 로그 파일

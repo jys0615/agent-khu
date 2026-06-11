@@ -38,10 +38,39 @@ def _load_data() -> dict:
     return _data_cache
 
 
+_YEAR_FALLBACK = {
+    "2021": "2020",
+    "2022": "2023",
+}
+
+
+def _resolve_year(year: str) -> str:
+    """데이터가 없는 연도를 가장 가까운 연도로 매핑"""
+    if year == "latest":
+        return "2025"
+    data = _load_data()
+    if year in data:
+        return year
+    fallback = _YEAR_FALLBACK.get(year)
+    if fallback and fallback in data:
+        print(f"⚠️ {year}년도 데이터 없음 → {fallback}년도로 대체", file=sys.stderr)
+        return fallback
+    # 가장 가까운 연도 선택
+    available = sorted(data.keys())
+    if not available:
+        return year
+    try:
+        yr = int(year)
+        closest = min(available, key=lambda y: abs(int(y) - yr))
+        print(f"⚠️ {year}년도 데이터 없음 → {closest}년도로 대체", file=sys.stderr)
+        return closest
+    except ValueError:
+        return available[-1]
+
+
 def _get_courses(year: str = "latest") -> list[dict]:
     data = _load_data()
-    if year == "latest":
-        year = "2025"
+    year = _resolve_year(year)
     return data.get(year, {}).get("catalog", [])
 
 
@@ -91,8 +120,7 @@ async def list_programs(year: str = "latest") -> dict:
         year: 기준 연도 (기본값: latest)
     """
     data = _load_data()
-    if year == "latest":
-        year = "2025"
+    year = _resolve_year(year)
     progs = data.get(year, {}).get("programs", {})
     if not progs:
         return {"found": False, "programs": [], "error": f"{year}년도 프로그램 정보를 찾을 수 없습니다"}
@@ -116,8 +144,7 @@ async def get_requirements(program: str = "KHU-CSE", year: str = "2025") -> dict
         year: 입학년도 (기본값: 2025)
     """
     data = _load_data()
-    if not year or year == "latest":
-        year = "2025"
+    year = _resolve_year(year or "latest")
     if year not in data:
         return {"found": False, "error": f"{year}년도 데이터가 없습니다"}
     progs = data[year].get("programs", {})
@@ -157,8 +184,7 @@ async def evaluate_progress(
         taken_courses: 이수한 과목 코드 목록
     """
     data = _load_data()
-    if not year or year == "latest":
-        year = "2025"
+    year = _resolve_year(year or "latest")
     progs = data.get(year, {}).get("programs", {})
     p = progs.get(program, {})
     prog_name = p.get("program_name", "컴퓨터공학과")

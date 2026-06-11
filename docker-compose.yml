@@ -96,9 +96,15 @@ services:
     container_name: agent-khu-mcp-notice
     environment:
       PORT: "8102"
+      BACKEND_PATH: /app
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_khu}
     ports:
       - "8102:8102"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
+      - ./backend:/app
       - ./mcp-servers:/mcp-servers
     command: python /mcp-servers/notice-mcp/server.py
     healthcheck:

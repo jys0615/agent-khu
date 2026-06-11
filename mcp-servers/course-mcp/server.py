@@ -40,23 +40,56 @@ class CourseScraper:
 
         print(f"🔍 크롤링 시작: {department} - {semester or '현재학기'}", file=sys.stderr)
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
             page = await browser.new_page()
             try:
-                await page.goto(self.BASE_URL, wait_until="networkidle")
-                await page.click("text=종합시간표")
-                await page.wait_for_load_state("networkidle")
-                await page.select_option("select#department", department)
-                if semester:
-                    await page.select_option("select#semester", semester)
-                await page.click("button#search")
-                await page.wait_for_selector("table.timetable", timeout=10000)
+                await page.goto(self.BASE_URL, wait_until="domcontentloaded", timeout=20000)
+
+                # 학과/학년 선택 후 검색
+                await page.wait_for_selector("select", timeout=10000)
+                selects = await page.query_selector_all("select")
+                if selects:
+                    # 첫 번째 select에 학과명 시도
+                    try:
+                        await selects[0].select_option(label=department)
+                    except Exception:
+                        pass
+                    if semester and len(selects) > 1:
+                        try:
+                            await selects[1].select_option(label=semester)
+                        except Exception:
+                            pass
+
+                # 검색 버튼 클릭 시도
+                for btn_sel in ["button[type='submit']", "input[type='submit']", "button.search", "button:has-text('검색')"]:
+                    try:
+                        btn = await page.query_selector(btn_sel)
+                        if btn:
+                            await btn.click()
+                            break
+                    except Exception:
+                        continue
+
+                # 결과 테이블 대기
+                await page.wait_for_selector("table", timeout=10000)
 
                 courses = await page.evaluate("""
                     () => {
-                        const rows = document.querySelectorAll('table.timetable tbody tr');
+                        const tables = document.querySelectorAll('table');
+                        let bestTable = null;
+                        let maxRows = 0;
+                        for (const t of tables) {
+                            const rows = t.querySelectorAll('tbody tr');
+                            if (rows.length > maxRows) {
+                                maxRows = rows.length;
+                                bestTable = t;
+                            }
+                        }
+                        if (!bestTable) return [];
+                        const rows = bestTable.querySelectorAll('tbody tr');
                         return Array.from(rows).map(row => {
                             const cells = row.querySelectorAll('td');
+                            if (cells.length < 3) return null;
                             return {
                                 code: cells[0]?.textContent?.trim() || '',
                                 name: cells[1]?.textContent?.trim() || '',
@@ -67,10 +100,11 @@ class CourseScraper:
                                 type: cells[6]?.textContent?.trim() || '',
                                 capacity: cells[7]?.textContent?.trim() || '',
                             };
-                        }).filter(c => c.code);
+                        }).filter(c => c && c.code);
                     }
                 """)
                 self._cache[key] = (courses, datetime.now())
+                print(f"✅ 크롤링 완료: {len(courses)}개 과목", file=sys.stderr)
                 return courses
             except Exception as e:
                 print(f"❌ 크롤링 오류: {e}", file=sys.stderr)
@@ -82,6 +116,14 @@ class CourseScraper:
 _scraper = CourseScraper()
 
 
+_FALLBACK = {
+    "available": False,
+    "message": "종합시간표 크롤링에 실패했습니다. 아래 공식 사이트에서 직접 확인해주세요.",
+    "official_url": "https://sugang.khu.ac.kr/",
+    "courses": [],
+}
+
+
 @mcp.tool()
 async def search_courses(department: str = "소프트웨어융합학과", keyword: str = "") -> dict:
     """학과별 개설 교과목 자동 조회 (종합시간표 크롤링)
@@ -91,6 +133,8 @@ async def search_courses(department: str = "소프트웨어융합학과", keywor
         keyword: 과목명 또는 교수명 검색어 (비워두면 전체)
     """
     courses = await _scraper.get_courses(department)
+    if not courses:
+        return {**_FALLBACK, "department": department, "total": 0}
     if keyword:
         kw = keyword.lower()
         courses = [
@@ -99,7 +143,7 @@ async def search_courses(department: str = "소프트웨어융합학과", keywor
             or kw in c.get("professor", "").lower()
             or kw in c.get("code", "").lower()
         ]
-    return {"department": department, "total": len(courses), "courses": courses[:20]}
+    return {"available": True, "department": department, "total": len(courses), "courses": courses[:20]}
 
 
 @mcp.tool()
@@ -110,8 +154,10 @@ async def get_professor_courses(professor: str) -> dict:
         professor: 교수명
     """
     all_courses = await _scraper.get_courses()
+    if not all_courses:
+        return {**_FALLBACK, "professor": professor}
     courses = [c for c in all_courses if professor in c.get("professor", "")]
-    return {"professor": professor, "total": len(courses), "courses": courses}
+    return {"available": True, "professor": professor, "total": len(courses), "courses": courses}
 
 
 @mcp.tool()
@@ -122,10 +168,12 @@ async def get_course_by_code(code: str) -> dict:
         code: 과목 코드
     """
     all_courses = await _scraper.get_courses()
+    if not all_courses:
+        return {**_FALLBACK, "code": code}
     course = next((c for c in all_courses if c.get("code") == code), None)
     if course:
         return {"found": True, "course": course}
-    return {"found": False, "error": f"과목 코드 {code}를 찾을 수 없습니다"}
+    return {"found": False, "error": f"과목 코드 {code}를 찾을 수 없습니다", "official_url": "https://sugang.khu.ac.kr/"}
 
 
 if __name__ == "__main__":

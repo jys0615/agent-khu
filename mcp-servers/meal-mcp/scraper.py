@@ -130,7 +130,7 @@ async def scrape_weekly_meal(anthropic_api_key: str) -> dict:
             client = Anthropic(api_key=anthropic_api_key)
             
             message = client.messages.create(
-                model="claude-opus-4-20250514",
+                model="claude-opus-4-5-20251101",
                 max_tokens=4096,
                 messages=[{
                     "role": "user",

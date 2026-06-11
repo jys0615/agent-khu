@@ -2,9 +2,16 @@ import json
 from pathlib import Path
 from typing import Dict, Any
 
+import sys
+from pathlib import Path
+_scrapers_dir = Path(__file__).resolve().parent / "scrapers"
+if str(_scrapers_dir) not in sys.path:
+    sys.path.insert(0, str(_scrapers_dir))
+
 try:
-    from .scrapers.library_scraper import get_seat_availability, reserve_seat
-except Exception:
+    from library_scraper import get_seat_availability, reserve_seat
+except Exception as e:
+    print(f"library_scraper import 실패: {e}")
     get_seat_availability = None
     reserve_seat = None
 
