@@ -81,6 +81,7 @@ class MCPClient:
         self.server_paths: Dict[str, Path] = {}
         self.server_params: Dict[str, StdioServerParameters] = {}
         self._sessions: Dict[str, MCPServerSession] = {}
+        self._discovered_tools: list[dict] = []  # discover_tools() 호출 후 채워짐
 
         env_root = os.getenv("MCP_ROOT")
         candidates = []
@@ -216,6 +217,47 @@ class MCPClient:
                 except json.JSONDecodeError:
                     return result.content.text
         return result
+
+    # ── Tool Discovery ────────────────────────────────────────────────────────
+
+    async def discover_tools(self) -> list[dict]:
+        """모든 MCP 서버에서 tool 목록을 동적으로 수집하고 내부에 캐시한다.
+
+        MCP 스펙 준수: 서버가 자신의 capability를 선언하고,
+        클라이언트는 startup 시 list_tools()로 동적 discovery.
+        tools_definition.py 하드코딩 방식 대체.
+
+        Returns:
+            Claude API 형식의 tool dict 리스트
+            [{"name": str, "description": str, "input_schema": dict}, ...]
+        """
+        discovered: dict[str, dict] = {}  # name → tool dict (중복 방지)
+
+        for name, session in self._sessions.items():
+            try:
+                # 세션이 없으면 lazy start
+                if session._session is None:
+                    await session.start()
+                result = await session._session.list_tools()
+                for tool in result.tools:
+                    if tool.name not in discovered:
+                        discovered[tool.name] = {
+                            "name": tool.name,
+                            "description": tool.description or "",
+                            "input_schema": tool.inputSchema or {"type": "object", "properties": {}},
+                        }
+                log.debug("Tool discovery: %s → %d tools", name, len(result.tools))
+            except Exception as e:
+                log.warning("Tool discovery 실패 (%s): %s", name, e)
+
+        self._discovered_tools = list(discovered.values())
+        log.info("Tool discovery 완료: 총 %d tools (%d 서버)",
+                 len(self._discovered_tools), len(self._sessions))
+        return self._discovered_tools
+
+    def get_tools(self) -> list[dict]:
+        """캐시된 tool 목록 반환. discover_tools() 호출 전이면 빈 리스트."""
+        return self._discovered_tools
 
     # ── Convenience wrappers ──────────────────────────────────────────────────
     async def meal_get_today(self, meal_type: str = "lunch") -> Any:

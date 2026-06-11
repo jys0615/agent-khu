@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     def allowed_origins(self) -> List[str]:
         return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]
 
+    # ── Ollama (로컬 SLM Layer 2) ─────────────────────────────────
+    # 미설정 시 Ollama 비활성화, Groq fallback 또는 템플릿 레이어만 사용
+    ollama_url: str = ""
+    ollama_model: str = "qwen2.5:1.5b"
+
     # ── MCP ──────────────────────────────────────────────────────
     mcp_root: str = ""
 

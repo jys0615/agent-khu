@@ -502,6 +502,210 @@ docker-compose up -d
 
 ---
 
+### [Phase 5] 코드 품질 3건 — Classifier·SLM·Tool Discovery
+
+**날짜**: 2026-06-08
+**수정 파일**: `question_classifier.py`, `slm_agent.py`, `mcp_client.py`, `agent/complex_handler.py`, `agent/agent_loop.py`, `main.py`, `config.py`
+**신규 파일**: `tests/test_question_classifier.py`, `mcp-servers/shuttle-mcp/server.py`
+**인프라**: `docker-compose.yml` (Ollama 추가), `.env.example`
+
+---
+
+#### 5-1. QuestionClassifier — 테스트 작성 + Groq 비동기 분류기 교체
+
+**문제**
+
+기존 `QuestionClassifier.classify()`는 동기 메서드 + regex 기반이었어요.
+
+1. **오분류**: `"강의실 위치 어떻게 가?"` → `어떻게` 패턴이 complex로 잘못 분류
+   `"졸업까지 몇 학점 남았어?"` → `몇\s*학점` 패턴이 simple로 잘못 분류
+2. **회귀 방지 불가**: 핵심 라우팅 결정 모듈인데 단위 테스트가 전무
+
+**해결**
+
+```python
+# Before — 동기 + regex만
+def classify(self, question: str) -> Literal["simple", "complex"]:
+    complex_count = sum(1 for p in COMPLEX_PATTERNS if re.search(p, question))
+    ...
+
+# After — async + Groq 우선, regex fallback
+async def classify(self, question: str) -> Literal["simple", "complex"]:
+    if self._groq_enabled:
+        try:
+            return await self._classify_with_groq(question)  # 문맥 이해
+        except Exception:
+            pass
+    return self._classify_with_regex(question)  # fallback
+```
+
+Groq 프롬프트 설계:
+```
+"다음 질문을 분류해. 단어 하나(simple 또는 complex)만 답해.
+- simple: 단순 정보 조회 (학식 메뉴, 강의실 위치, 셔틀 시간 등)
+- complex: 추론·비교·추천·분석 (졸업요건 분석, 과목 추천 등)
+질문: {question}"
+```
+
+`max_tokens=5, temperature=0.0` → latency ~200ms, 결정론적 답변.
+
+**테스트 전략 (test_question_classifier.py)**
+
+```
+test_regex_correct_cases       — regex가 정확히 처리하는 케이스 (12개)
+test_regex_known_misclassification — regex의 알려진 오분류 문서화 (3개)
+test_classify_async_interface  — async classify() 인터페이스 검증 (5개)
+```
+
+CI 환경(Groq 키 없음)에서 regex fallback으로 전체 20개 테스트 통과.
+
+**오분류 케이스 확인 결과**
+
+| 질문 | regex | Groq | 실제 정답 |
+|---|---|---|---|
+| 강의실 위치 어떻게 가? | complex ❌ | simple ✅ | simple |
+| 셔틀 어떻게 타? | complex ❌ | simple ✅ | simple |
+| 졸업까지 몇 학점 남았어? | simple ❌ | complex ✅ | complex |
+
+**트러블슈팅 포인트**
+
+- `agent_loop.py`의 `classifier.classify(message)`를 `await classifier.classify(message)`로 변경 필수.
+  동기 호출로 두면 coroutine 객체가 반환되어 `if question_type == "simple"` 비교가 항상 False가 됨.
+- Groq `AsyncGroq`는 `groq` 패키지에 포함됨 (별도 설치 불필요).
+- Groq 응답이 `"simple"` 또는 `"complex"` 이외면 regex로 재판정 → 예외 없이 안전.
+
+---
+
+#### 5-2. SLM Agent — 3계층 구조 (템플릿 → Ollama → Groq)
+
+**문제**
+
+기존 SLM은 Groq 단일 레이어였어요.
+
+1. `"오늘 학식 뭐야?"` 같은 구조화 데이터도 Groq API 호출 — 불필요한 latency·비용
+2. Groq 동기 클라이언트(`Groq`) 사용 → FastAPI async 환경에서 이벤트 루프 블로킹
+3. `category` 정보를 SLM에 전달하지 않아 템플릿 최적화 불가
+
+**해결: 3계층 파이프라인**
+
+```
+Layer 1. 템플릿 추출 — 구조화 카테고리(meal/classroom/shuttle/library)에서
+                        "A:" 파트 직접 추출. 비용 0, 지연 0.
+
+Layer 2. Ollama 로컬 — OLLAMA_URL 설정 시 qwen2.5:1.5b로 생성.
+                        완전 무료, 오프라인 동작.
+
+Layer 3. Groq async  — Ollama 미실행 환경 fallback.
+                        동기 Groq → AsyncGroq로 교체 (이벤트 루프 블로킹 제거).
+```
+
+```python
+# Before — Groq 동기 단일
+def generate(self, question, context_docs):
+    response = self._client.chat.completions.create(...)  # 블로킹
+
+# After — 3계층 async
+async def generate(self, question, context_docs, category=""):
+    template_answer = _try_template(question, context_docs, category)  # Layer 1
+    if template_answer:
+        return {"message": template_answer, "confidence": 0.95, "layer": "template"}
+
+    if self._ollama and await self._ollama.is_available():             # Layer 2
+        answer = await self._ollama.generate(prompt)
+        ...
+
+    if self._groq:                                                     # Layer 3
+        answer = await self._groq.generate(system, user_content)
+        ...
+```
+
+**Docker Compose 변경**
+
+```yaml
+ollama:
+  image: ollama/ollama:latest
+  volumes:
+    - ollama_data:/root/.ollama
+  ports: ["11434:11434"]
+  healthcheck: ...
+```
+
+모델 초기 설치:
+```bash
+docker exec agent-khu-ollama ollama pull qwen2.5:1.5b
+```
+
+**트러블슈팅 포인트**
+
+- `Ollama.is_available()`은 Ollama 실행 여부 + 모델 다운로드 여부를 모두 확인.
+  모델이 없으면 경고 로그를 출력하고 Groq으로 fallback.
+- `qwen2.5:1.5b` 크기: ~1GB. Docker 볼륨(`ollama_data`)에 캐시되므로 재시작해도 재다운로드 없음.
+- Ollama 컨테이너가 없어도 backend는 정상 시작 (optional 의존성).
+- `slm_agent.py` → `agent_loop.py` 호출 변경: `category=rag_result.get("category", "")` 추가 전달 필수.
+
+---
+
+#### 5-3. tools_definition.py → 동적 Tool Discovery
+
+**문제**
+
+`tools_definition.py`에 17개 tool 정의가 하드코딩되어 있었어요.
+
+```
+MCP 서버 tool 추가
+  → tools_definition.py 수동 수정 필요
+  → complex_handler.py 재배포 필요
+```
+
+MCP 표준 원칙 위반: 서버가 자신의 capability를 선언하고, 클라이언트가 동적으로 discovery해야 함.
+
+**해결**
+
+startup 시 `list_tools()` 호출로 동적 수집:
+
+```python
+# mcp_client.py
+async def discover_tools(self) -> list[dict]:
+    """모든 MCP 서버에서 tool 목록을 동적 수집 → 내부 캐시"""
+    for name, session in self._sessions.items():
+        result = await session._session.list_tools()
+        for tool in result.tools:
+            discovered[tool.name] = {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.inputSchema,  # MCP camelCase → Claude snake_case
+            }
+    self._discovered_tools = list(discovered.values())
+
+def get_tools(self) -> list[dict]:
+    return self._discovered_tools
+```
+
+```python
+# main.py lifespan
+await mcp_client.start_all()
+await mcp_client.discover_tools()  # startup 시 1회 discovery
+
+# complex_handler.py
+_tools = mcp_client.get_tools() or _hardcoded_tools  # fallback 포함
+response = await _client.messages.create(..., tools=_tools)
+```
+
+`tools_definition.py`의 `tools` 리스트는 하드코딩 fallback으로만 사용.
+`CACHE_TTL`은 `tool_executor.py`에서 계속 사용.
+
+**트러블슈팅 포인트**
+
+- `inputSchema`(MCP, camelCase) → `input_schema`(Claude API, snake_case) 변환 필수.
+  미변환 시 Claude API가 `400 invalid_request_error` 반환.
+- discovery 결과를 dict로 관리 (tool name 키) → 서버간 중복 tool 이름 자동 deduplicate.
+- `get_tools()` 가 빈 리스트를 반환하면 `_hardcoded_tools` fallback 발동.
+  MCP 서버 전체 startup 실패 시에도 기존 동작 유지.
+- shuttle-mcp처럼 서버 파일은 있으나 세션 시작에 실패한 경우:
+  `discover_tools()` 내부에서 해당 서버를 건너뛰고 나머지 서버의 tool만 수집.
+
+---
+
 ### [Phase 6] Streamable HTTP 스트리밍 (MCP 2025-03-26 표준)
 
 **날짜**: 2026-04-24

@@ -9,7 +9,8 @@ from typing import Optional, Dict, Any, List, Tuple, Callable, Awaitable
 from anthropic import AsyncAnthropic
 from .. import models
 from ..config import get_settings
-from .tools_definition import tools
+from ..mcp_client import mcp_client
+from .tools_definition import tools as _hardcoded_tools  # discover 실패 시 fallback
 from .tool_executor import process_tool_call
 from .utils import detect_curriculum_intent, build_system_prompt
 from .result_builder import (
@@ -51,13 +52,14 @@ async def run_llm_agent(
     for iteration in range(1, _MAX_ITERATIONS + 1):
         log.debug("Agent iteration %d/%d", iteration, _MAX_ITERATIONS)
 
+        _tools = mcp_client.get_tools() or _hardcoded_tools
         response = await _client.messages.create(
             model=_MODEL,
             max_tokens=2048,
             system=[{"type": "text", "text": system_prompt,
                      "cache_control": {"type": "ephemeral"}}],
             messages=messages,
-            tools=tools,
+            tools=_tools,
         )
 
         if response.stop_reason == "tool_use":
@@ -223,13 +225,14 @@ async def run_llm_agent_stream(
         log.debug("Stream iteration %d/%d", iteration, _MAX_ITERATIONS)
 
         # Claude streaming API — 텍스트 토큰 실시간 전송
+        _tools = mcp_client.get_tools() or _hardcoded_tools
         async with _client.messages.stream(
             model=_MODEL,
             max_tokens=2048,
             system=[{"type": "text", "text": system_prompt,
                      "cache_control": {"type": "ephemeral"}}],
             messages=messages,
-            tools=tools,
+            tools=_tools,
         ) as stream:
             async for text in stream.text_stream:
                 await on_event({"type": "text", "delta": text})

@@ -59,6 +59,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning("MCP 세션 풀 시작 중 오류 (lazy start로 대체): %s", e)
 
+    # 5-1) Tool 동적 discovery (Phase 1: tools_definition.py 하드코딩 대체)
+    try:
+        tools = await mcp_client.discover_tools()
+        log.info("MCP tool discovery 완료: %d tools", len(tools))
+    except Exception as e:
+        log.warning("MCP tool discovery 실패 (하드코딩 fallback 사용): %s", e)
+
     # 6) 백그라운드 스케줄러 시작
     try:
         start_scheduler()

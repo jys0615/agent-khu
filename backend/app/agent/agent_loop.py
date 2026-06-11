@@ -33,7 +33,7 @@ async def chat_with_claude_async(
     LLM 실패 → 규칙 기반 MCP 직접 호출 (Fallback)
     """
     start = time.time()
-    question_type = classifier.classify(message)
+    question_type = await classifier.classify(message)
     routing = "llm"
     tools_used: List[str] = []
 
@@ -50,6 +50,7 @@ async def chat_with_claude_async(
                     slm_result = await slm.generate(
                         question=message,
                         context_docs=rag_result["docs"],
+                        category=rag_result.get("category", ""),
                     )
                     if slm_result["success"] and slm_result["confidence"] >= 0.6:
                         routing = "rag_slm"

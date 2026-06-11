@@ -48,6 +48,20 @@ services:
       timeout: 5s
       retries: 5
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: agent-khu-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   backend:
     build:
       context: .
@@ -60,6 +74,8 @@ services:
       # Inject at runtime via .env or CI secrets; compose will fail fast if missing
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set-in-env}
       ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
     ports:
       - "8000:8000"
     depends_on:
@@ -91,3 +107,4 @@ volumes:
   postgres_data:
   redis_data:
   elasticsearch_data:
+  ollama_data:
